@@ -18,7 +18,7 @@ class ReportFeatureTest(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser('report-admin', 'report@test.com', 'p')
         self.guest = User.objects.create_user('report-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.guest, room=room,
             tanggal_check_in=date(2027, 1, 1), tanggal_check_out=date(2027, 1, 2),

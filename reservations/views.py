@@ -19,6 +19,7 @@ class BookingCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         # Menghitung total harga otomatis (enkapsulasi)
         self.object.hitung_total_biaya()
+        self.object.ensure_payment()
         return response
 
     def get_success_url(self):
@@ -71,13 +72,17 @@ class PaymentCreateView(LoginRequiredMixin, CreateView):
 
     def post(self, request, *args, **kwargs):
         booking = get_object_or_404(Booking, pk=kwargs['booking_id'], user=request.user)
-        if booking.status_pesanan != 'PENDING_PAYMENT' or Payment.objects.filter(booking=booking).exists():
+        payment = Payment.objects.filter(booking=booking).first()
+        if booking.status_pesanan != 'PENDING_PAYMENT' or payment and payment.status_pembayaran not in ('UNPAID', 'REJECTED'):
             messages.error(request, 'Booking ini tidak dapat menerima pembayaran baru.')
             return redirect('booking_detail', pk=booking.pk)
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         booking = Booking.objects.get(pk=self.kwargs['booking_id'], user=self.request.user)
+        payment = Payment.objects.filter(booking=booking).first()
+        if payment is not None:
+            form.instance = payment
         form.instance.booking = booking
         form.instance.amount = booking.total_biaya_akhir
         # Bukti diunggah → tandai menunggu verifikasi manual oleh staf.

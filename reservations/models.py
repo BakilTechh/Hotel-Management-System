@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from rooms.models import Room
+from rooms.models import Room, RoomAvailability
 
 #Ini sementara aja karena room blm selesai
 class TemporaryRoom(models.Model):
@@ -80,7 +80,14 @@ class Booking(BaseTransaction):
             tanggal_check_in__lt=check_out,
             tanggal_check_out__gt=check_in,
         ).values('room_id')
-        return Room.objects.filter(status='CLEAN').exclude(pk__in=blocked_room_ids)
+        blocked_dates = RoomAvailability.objects.filter(
+            date__gte=check_in,
+            date__lt=check_out,
+            is_available=False,
+        ).values('room_id')
+        return Room.objects.filter(is_active=True, status='CLEAN').exclude(
+            pk__in=blocked_room_ids,
+        ).exclude(pk__in=blocked_dates)
 
     def hitung_total_biaya(self):
         """Abstraksi kalkulasi biaya"""
@@ -97,6 +104,24 @@ class Booking(BaseTransaction):
         self.pajak_dan_layanan = subtotal * Decimal('0.11')
         self.total_biaya_akhir = subtotal + self.pajak_dan_layanan
         self.save()
+
+    def ensure_payment(self):
+        return Payment.objects.get_or_create(
+            booking=self,
+            defaults={
+                'amount': self.total_biaya_akhir,
+                'metode_pembayaran': 'Belum dipilih',
+                'status_pembayaran': 'UNPAID',
+            },
+        )[0]
+
+    def konfirmasi(self):
+        payment = getattr(self, 'payment', None)
+        if payment is None or payment.status_pembayaran != 'VERIFIED':
+            return False
+        self.status_pesanan = 'CONFIRMED'
+        self.save(update_fields=['status_pesanan', 'updated_at'])
+        return True
 
     def batalkan_pesanan(self):
         if self.status_pesanan in {'PENDING_PAYMENT', 'CONFIRMED'}:
@@ -146,11 +171,11 @@ class Payment(BaseTransaction):
     def verifikasi_pembayaran(self, is_approved: bool):
         if is_approved:
             self.status_pembayaran = 'VERIFIED'
-            self.booking.status_pesanan = 'CONFIRMED'
         else:
             self.status_pembayaran = 'REJECTED'
         self.save()
-        self.booking.save()
+        if is_approved:
+            self.booking.konfirmasi()
 
 
 class Review(BaseTransaction):

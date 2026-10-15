@@ -147,7 +147,7 @@ class ChatApiView(LoginRequiredMixin, View):
                     'Data reservasi ditemukan:\n\n'
                     f'Nama: {booking.user.first_name or booking.user.username}\n'
                     f'Tipe Kamar: {room.room_type.name}\n'
-                    f'No. Kamar: {room.room_number}\n'
+                    f'No. Kamar: {room.number}\n'
                     f'Jadwal Menginap: {jadwal}\n'
                     f'Status: {booking.get_status_pesanan_display()}'
                 ),

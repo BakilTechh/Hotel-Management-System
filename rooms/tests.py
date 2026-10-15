@@ -44,7 +44,7 @@ class RoomTypeFeatureTests(TestCase):
 
 	def test_room_type_in_use_cannot_be_deleted(self):
 		room_type = RoomType.objects.create(name='Used Type', capacity=2, price_per_night=Decimal('900000.00'))
-		Room.objects.create(room_type=room_type, room_number='901')
+		Room.objects.create(room_type=room_type, number='901')
 
 		with self.assertRaises(ProtectedError):
 			room_type.delete()
@@ -59,7 +59,7 @@ class RoomFeatureTests(TestCase):
 	def test_room_unit_can_be_created_and_updated(self):
 		from .models import Room
 
-		room = Room.objects.create(room_type=self.room_type, room_number='999', status='CLEAN')
+		room = Room.objects.create(room_type=self.room_type, number='999', status='CLEAN')
 		room.status = 'MAINTENANCE'
 		room.save()
 
@@ -69,6 +69,6 @@ class RoomFeatureTests(TestCase):
 	def test_duplicate_room_number_is_rejected(self):
 		from .models import Room
 
-		Room.objects.create(room_type=self.room_type, room_number='999')
+		Room.objects.create(room_type=self.room_type, number='999')
 		with self.assertRaises(IntegrityError):
-			Room.objects.create(room_type=self.room_type, room_number='999')
+			Room.objects.create(room_type=self.room_type, number='999')

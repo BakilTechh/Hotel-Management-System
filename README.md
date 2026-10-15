@@ -1,6 +1,9 @@
 # Hotel Management System
 
 Hotel Management System berbasis Django.
+# Hotel Management System
+
+Hotel Management System berbasis Django.
 
 ## Tech Stack
 
@@ -18,6 +21,38 @@ Hotel Management System berbasis Django.
 3. Install dependencies
 4. Run migration
 5. Run development server
+
+## Core business rules
+
+- Check-out must be later than check-in.
+- Guest count cannot exceed the selected Room Type capacity.
+- Only active CLEAN rooms can be booked.
+- A room cannot have overlapping active bookings.
+- Every application-created Booking receives one UNPAID Payment record.
+- A Booking becomes CONFIRMED only through verified payment flow.
+- Check-in requires CONFIRMED; check-out requires CHECKED_IN.
+- Check-out records its time and marks the room DIRTY.
+- Review requires CHECKED_OUT and is limited to one per Booking.
+- Guests can only access their own Booking data; staff access is Admin-only.
+
+## Main routes
+
+- `/rooms/`: room catalog and date availability search.
+- `/reservations/buat/`: create a booking.
+- `/reservations/riwayat/`: guest booking history.
+- `/room-service/`: authenticated room-service chatbot.
+- `/dashboard/laporan/`: staff-only operational report.
+- `/admin/`: Room Type, Room, Booking, Payment, Review, and user management.
+
+## Acceptance test
+
+Run these commands before changing Booking, Payment, Room, or Review rules:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check
+.\.venv\Scripts\python.exe manage.py test
+```
 
 ## Room Service Chatbot (Gemini)
 

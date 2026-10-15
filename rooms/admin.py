@@ -4,7 +4,7 @@ from .models import Room, RoomType, RoomAvailability
 
 @admin.register(RoomType)
 class RoomTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price_per_night', 'capacity', 'size_m2')
+    list_display = ('name', 'price_per_night', 'capacity')
     search_fields = ('name',)
 
 

@@ -11,7 +11,7 @@ admin.site.register(PromoVoucher)
 class BookingAdmin(admin.ModelAdmin):
 	list_display = ('id', 'user', 'room', 'tanggal_check_in', 'tanggal_check_out', 'total_biaya_akhir', 'status_pesanan')
 	list_filter = ('status_pesanan',)
-	search_fields = ('user__username', 'room__room_number')
+	search_fields = ('user__username', 'room__number')
 	ordering = ('-created_at',)
 	actions = ('check_in_bookings', 'check_out_bookings')
 
@@ -32,24 +32,18 @@ class BookingAdmin(admin.ModelAdmin):
 		self.message_user(request, f'{checked_out} booking berhasil check-out.')
 
 	def save_model(self, request, obj, form, change):
-		"""Mengubah status booking menjadi Confirmed juga memverifikasi
-		pembayaran terkait yang masih menunggu, supaya kedua sisi
-		(status tamu + status pembayaran) selalu konsisten."""
 		old_status = None
 		if change:
 			old_status = Booking.objects.filter(pk=obj.pk).values_list('status_pesanan', flat=True).first()
-		super().save_model(request, obj, form, change)
-		if old_status != 'CONFIRMED' and obj.status_pesanan == 'CONFIRMED':
+		if obj.status_pesanan == 'CONFIRMED':
 			try:
 				payment = obj.payment
 			except Payment.DoesNotExist:
 				payment = None
-			if payment is not None and payment.status_pembayaran in ('UNPAID', 'PENDING_VERIFICATION'):
-				payment.status_pembayaran = 'VERIFIED'
-				payment.verified_by = request.user
-				payment.verified_at = timezone.now()
-				payment.save()
-				self.message_user(request, f'Pembayaran #{payment.pk} ikut terverifikasi otomatis.')
+			if payment is None or payment.status_pembayaran != 'VERIFIED':
+				obj.status_pesanan = old_status or 'PENDING_PAYMENT'
+				self.message_user(request, 'Booking belum dapat Confirmed sebelum Payment terverifikasi.', level='ERROR')
+		super().save_model(request, obj, form, change)
 
 
 @admin.register(Payment)
