@@ -12,6 +12,13 @@ class BookingCreateView(LoginRequiredMixin, CreateView):
     model = Booking
     form_class = BookingForm
     template_name = 'reservations/booking_form.html' # Mutia bakal bikin ui di sini
+
+    def get_initial(self):
+        initial = super().get_initial()
+        room_id = self.request.GET.get('room')
+        if room_id:
+            initial['room'] = room_id
+        return initial
     
     def form_valid(self, form):
         # Otomatis ngisi user yang sedang login

@@ -1,9 +1,3 @@
-from django.contrib import admin
-from django.urls import path, include
-from django.views.generic import RedirectView
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('rooms/', include('rooms.urls')),
-    path('', RedirectView.as_view(pattern_name='rooms:room_list', permanent=False)),
-]
+# Room URL patterns are registered directly in config/urls.py.
+# This file is intentionally kept minimal to avoid accidental
+# infinite recursion (the previous version included itself).
