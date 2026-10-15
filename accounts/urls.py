@@ -2,12 +2,18 @@ from django.urls import path
 
 from . import views
 
-urlpatterns = [
-    path('register/', views.register, name='register'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('me/', views.me, name='me'),
 
-    path('users/', views.users, name='users'), 
-    path('users/<int:pk>/', views.user_detail, name='user_detail'), 
+urlpatterns = [
+    # Halaman auth server-rendered (dipakai template login/register/logout)
+    path('login/', views.AccountLoginView.as_view(), name='login'),
+    path('register/', views.RegisterView.as_view(), name='register'),
+    path('logout/', views.AccountLogoutView.as_view(), name='logout'),
+
+    # API JSON (dipakai untuk user management / integrasi terpisah)
+    path('api/register/', views.register, name='api_register'),
+    path('api/login/', views.login_view, name='api_login'),
+    path('api/logout/', views.logout_view, name='api_logout'),
+    path('api/me/', views.me, name='me'),
+    path('api/users/', views.users, name='users'),
+    path('api/users/<int:pk>/', views.user_detail, name='user_detail'),
 ]

@@ -3,11 +3,14 @@ from functools import wraps
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView, LogoutView
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
+from django.urls import reverse_lazy
 from django.views.decorators.csrf import csrf_exempt 
 from django.views.decorators.http import require_GET, require_POST
+from django.views.generic import CreateView
 
 from .forms import AccountLoginForm, AccountRegisterForm
 from .models import GuestProfile
@@ -202,3 +205,32 @@ def user_detail(request, pk):
         return JsonResponse({'message': 'User dihapus'})
 
     return _err('Method tidak diizinkan', 405)
+
+
+# ---------- auth HTML (server-rendered, dipakai template) ----------
+class AccountLoginView(LoginView):
+    template_name = 'accounts/login.html'
+    authentication_form = AccountLoginForm
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        user = self.request.user
+        if user.is_staff or _role(user) == 'ADMIN':
+            return reverse_lazy('admin:index')
+        return reverse_lazy('home')
+
+
+class AccountLogoutView(LogoutView):
+    pass
+
+
+class RegisterView(CreateView):
+    model = User
+    form_class = AccountRegisterForm
+    template_name = 'accounts/register.html'
+    success_url = reverse_lazy('home')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        login(self.request, self.object)
+        return response
