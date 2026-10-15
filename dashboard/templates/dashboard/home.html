@@ -27,7 +27,7 @@
         <div class="header-actions">
             {% if user.is_authenticated %}<span class="language">Halo, {{ user.first_name|default:user.username }}</span><form class="logout-form" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="language" style="border:0;background:transparent;cursor:pointer;padding:0;font:inherit" type="submit">Keluar</button></form>{% else %}<a class="language" href="{% url 'login' %}">Masuk</a>{% endif %}
             <a class="button btn btn-danger button-dark" href="{% url 'booking_create' %}">Pesan Sekarang</a>
-            <span class="profile-icon" aria-hidden="true">●</span>
+            {% if user.is_authenticated %}<a class="profile-icon" href="{% url 'booking_list' %}" aria-label="Pemesanan saya">●</a>{% else %}<a class="profile-icon" href="{% url 'login' %}" aria-label="Masuk">●</a>{% endif %}
         </div>
     </header>
 
@@ -38,11 +38,11 @@
                 <p class="eyebrow eyebrow-light">Tempat peristirahatan elegan <span></span></p>
                 <h1>Rasakan Keramahan Abadi<br><em>&amp; Kenyamanan Mewah</em></h1>
                 <p class="hero-copy">Sebuah ruang untuk beristirahat, menikmati waktu, dan menemukan kembali<br class="desktop-only"> arti dari kenyamanan yang sederhana.</p>
-                <form class="search-panel" action="{% url 'booking_create' %}" method="get">
-                    <label><span>Check-in</span><strong>04/12/2025</strong></label>
-                    <label><span>Check-out</span><strong>04/16/2025</strong></label>
-                    <label><span>Tamu &amp; okupansi</span><strong>2 Adult, 0 Anak</strong></label>
-                    <label><span>Room type</span><strong>Suite</strong></label>
+                <form class="search-panel" action="{% url 'room_list' %}" method="get">
+                    <label><span>Check-in</span><input type="date" name="check_in" value="2026-12-01" required></label>
+                    <label><span>Check-out</span><input type="date" name="check_out" value="2026-12-03" required></label>
+                    <label><span>Tamu &amp; okupansi</span><select name="guests"><option value="2">2 Dewasa</option><option value="1">1 Dewasa</option><option value="3">3 Dewasa</option><option value="4">4 Dewasa</option></select></label>
+                    <label><span>Room type</span><select name="type"><option value="">Semua tipe</option>{% for room_type in room_types %}<option value="{{ room_type.pk }}">{{ room_type.name }}</option>{% endfor %}</select></label>
                     <button class="button button-accent" type="submit">Cek Ketersediaan <span>→</span></button>
                 </form>
             </div>
@@ -67,7 +67,7 @@
                         <div class="room-meta"><span>{{ room.capacity }}</span><span>{{ room.size }}</span><span>{{ room.view }}</span></div>
                         <h3>{{ room.name }}</h3><p>{{ room.description }}</p>
                         <ul><li>Ruang nyaman dengan cahaya alami</li><li>Layanan kamar 24 jam</li><li>Wi-Fi berkecepatan tinggi</li></ul>
-                        <div class="card-actions"><a class="button button-light" href="{% url 'room_detail' forloop.counter %}">Lihat Detail</a><a class="button button-dark" href="{% url 'booking_create' %}">Pesan Sekarang</a></div>
+                        <div class="card-actions"><a class="button button-light" href="{% url 'room_detail' room.database_room.pk %}">Lihat Detail</a><a class="button button-dark" href="{% url 'booking_create' %}">Pesan Sekarang</a></div>
                     </div>
                 </article>
                 {% endfor %}

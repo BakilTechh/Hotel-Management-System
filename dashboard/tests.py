@@ -45,3 +45,14 @@ class ReportFeatureTest(TestCase):
         self.assertEqual(response.context['total_bookings'], 1)
         self.assertEqual(response.context['confirmed_bookings'], 1)
         self.assertEqual(response.context['verified_payments'], 1)
+
+
+class DashboardNavigationTest(TestCase):
+    def test_dashboard_links_to_room_search_and_real_room_detail(self):
+        room = Room.objects.order_by('number').first()
+
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/rooms/"')
+        self.assertContains(response, f'href="/rooms/{room.pk}/"')
