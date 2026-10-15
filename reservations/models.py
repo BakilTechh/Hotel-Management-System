@@ -1,17 +1,9 @@
 from decimal import Decimal
 
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.utils import timezone
 from rooms.models import Room, RoomAvailability
-
-#Ini sementara aja karena room blm selesai
-class TemporaryRoom(models.Model):
-    nomor_kamar = models.CharField(max_length=10)
-    harga_per_malam = models.FloatField(default=500000.0)
-
-    def __str__(self):
-        return f"Kamar {self.nomor_kamar}"
 
 #Inheritance
 class BaseTransaction(models.Model):
@@ -31,7 +23,11 @@ class PromoVoucher(BaseTransaction):
     kuota_penggunaan = models.IntegerField(default=0)
 
     def is_valid(self, total_transaksi):
-        return self.kuota_penggunaan > 0 and Decimal(str(total_transaksi)) >= Decimal(str(self.minimal_transaksi))
+        return (
+            self.kuota_penggunaan > 0
+            and timezone.now() <= self.tanggal_kedaluwarsa
+            and Decimal(str(total_transaksi)) >= Decimal(str(self.minimal_transaksi))
+        )
 
     def __str__(self):
         return self.kode_voucher
@@ -96,14 +92,28 @@ class Booking(BaseTransaction):
         
         self.total_harga_dasar = Decimal(str(self.room.room_type.price_per_night)) * durasi
         diskon = Decimal('0')
+        self._voucher_applied = False
 
         if self.voucher and self.voucher.is_valid(self.total_harga_dasar):
             diskon = (self.total_harga_dasar * (Decimal(str(self.voucher.persen_diskon)) / Decimal('100'))) if self.voucher.persen_diskon > 0 else Decimal(str(self.voucher.potongan_nominal))
+            self._voucher_applied = diskon > 0
 
         subtotal = max(Decimal('0'), self.total_harga_dasar - diskon)
         self.pajak_dan_layanan = subtotal * Decimal('0.11')
         self.total_biaya_akhir = subtotal + self.pajak_dan_layanan
         self.save()
+
+    @transaction.atomic
+    def konsumsi_voucher(self):
+        """Kurangi kuota voucher yang benar-benar dipakai pada booking ini."""
+        if not getattr(self, '_voucher_applied', False) or not self.voucher_id:
+            return False
+        voucher = PromoVoucher.objects.select_for_update().get(pk=self.voucher_id)
+        if voucher.kuota_penggunaan <= 0:
+            return False
+        voucher.kuota_penggunaan -= 1
+        voucher.save(update_fields=['kuota_penggunaan', 'updated_at'])
+        return True
 
     def ensure_payment(self):
         return Payment.objects.get_or_create(

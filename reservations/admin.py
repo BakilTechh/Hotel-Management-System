@@ -1,9 +1,8 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Booking, Payment, PromoVoucher, Review, TemporaryRoom
+from .models import Booking, Payment, PromoVoucher, Review
 
-admin.site.register(TemporaryRoom)
 admin.site.register(PromoVoucher)
 
 

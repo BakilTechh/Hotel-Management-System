@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from rooms.models import Room
 from reservations.forms import BookingForm, ReviewForm
@@ -413,3 +414,160 @@ class ReviewFeatureTest(TestCase):
         form = ReviewForm(data={'rating': 6, 'comment': 'Invalid'})
 
         self.assertFalse(form.is_valid())
+
+
+class VoucherUsageTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('voucher-guest', password='p')
+        self.client.force_login(self.user)
+
+    def test_booking_decrements_voucher_quota(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        initial_quota = voucher.kuota_penggunaan
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=30)
+
+        response = self.client.post('/reservations/buat/', {
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.kuota_penggunaan, initial_quota - 1)
+
+    def test_booking_without_voucher_keeps_quota(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        initial_quota = voucher.kuota_penggunaan
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=40)
+
+        self.client.post('/reservations/buat/', {
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': '',
+        })
+
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.kuota_penggunaan, initial_quota)
+
+    def test_expired_voucher_is_rejected(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        voucher.tanggal_kedaluwarsa = timezone.now() - timedelta(days=1)
+        voucher.save()
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=50)
+
+        form = BookingForm(data={
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('Voucher tidak berlaku', form.non_field_errors()[0])
+
+    def test_exhausted_voucher_is_rejected(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        voucher.kuota_penggunaan = 0
+        voucher.save()
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=60)
+
+        form = BookingForm(data={
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('Voucher tidak berlaku', form.non_field_errors()[0])
+
+
+class ReceptionViewTest(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user('front-desk', password='p', is_staff=True)
+        self.guest = User.objects.create_user('walk-in', password='p')
+        self.room = Room.objects.order_by('number').first()
+
+    def test_staff_can_open_reception_page(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Meja resepsionis')
+
+    def test_guest_is_forbidden_from_reception_page(self):
+        self.client.force_login(self.guest)
+
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_is_redirected_to_login(self):
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response.url)
+
+    def test_staff_can_check_in_guest_on_arrival_day(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate(),
+            tanggal_check_out=timezone.localdate() + timedelta(days=1),
+            jumlah_tamu=1, status_pesanan='CONFIRMED',
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_in',
+        })
+
+        self.assertRedirects(response, '/reservations/resepsionis/')
+        booking.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CHECKED_IN')
+
+    def test_early_check_in_is_blocked(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate() + timedelta(days=5),
+            tanggal_check_out=timezone.localdate() + timedelta(days=6),
+            jumlah_tamu=1, status_pesanan='CONFIRMED',
+        )
+        self.client.force_login(self.staff)
+
+        self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_in',
+        })
+
+        booking.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CONFIRMED')
+
+    def test_staff_can_check_out_in_house_guest(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate() - timedelta(days=1),
+            tanggal_check_out=timezone.localdate(),
+            jumlah_tamu=1, status_pesanan='CHECKED_IN',
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_out',
+        })
+
+        self.assertRedirects(response, '/reservations/resepsionis/')
+        booking.refresh_from_db()
+        self.room.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CHECKED_OUT')
+        self.assertEqual(self.room.status, 'DIRTY')

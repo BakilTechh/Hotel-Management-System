@@ -1,11 +1,12 @@
 from datetime import timedelta
 
+from django.db.models import Avg, Count
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from reservations.models import Booking
-from .models import Room, RoomType, RoomAvailability
+from reservations.models import Booking, Review
+from .models import Room, RoomType
 
 
 def _room_card(room):
@@ -88,17 +89,57 @@ def room_detail(request, pk):
             date__gte=today, date__lt=end, is_available=False
         )
     }
+
+    blocking_statuses = ['PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN']
+    booked_dates = set()
+    for check_in, check_out in room.bookings.filter(
+        status_pesanan__in=blocking_statuses,
+        tanggal_check_out__gt=today,
+        tanggal_check_in__lt=end,
+    ).values_list('tanggal_check_in', 'tanggal_check_out'):
+        cursor = max(check_in, today)
+        while cursor < check_out and cursor < end:
+            booked_dates.add(cursor)
+            cursor += timedelta(days=1)
+
     calendar = []
     for i in range(14):
         d = today + timedelta(days=i)
         entry = blocked.get(d)
+        is_booked = d in booked_dates
         calendar.append({
             'date': d,
-            'available': entry is None,
-            'note': entry.note if entry else '',
+            'available': entry is None and not is_booked,
+            'note': entry.note if entry else ('Terisi' if is_booked else ''),
         })
+
+    reviews = list(
+        Review.objects.filter(booking__room=room)
+        .select_related('guest')
+        .order_by('-created_at')
+    )
+    rating_summary = Review.objects.filter(booking__room=room).aggregate(
+        average=Avg('rating'), count=Count('id')
+    )
 
     return render(request, 'rooms/room_detail.html', {
         'room': _room_card(room),
         'calendar': calendar,
+        'reviews': reviews,
+        'rating_average': rating_summary['average'],
+        'rating_count': rating_summary['count'],
+    })
+
+
+def review_list(request):
+    """Daftar ulasan tamu untuk semua kamar (halaman "Ulasan Tamu")."""
+    reviews = (
+        Review.objects.select_related('guest', 'booking__room')
+        .order_by('-created_at')
+    )
+    summary = reviews.aggregate(average=Avg('rating'), count=Count('id'))
+    return render(request, 'rooms/review_list.html', {
+        'reviews': reviews,
+        'rating_average': summary['average'],
+        'rating_count': summary['count'],
     })

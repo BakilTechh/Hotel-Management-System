@@ -1,7 +1,6 @@
 {% extends 'reservations/base.html' %}
 {% block title %}Detail Reservasi{% endblock %}
 {% block content %}
-{% if messages %}<div class="messages-container" style="margin-bottom:16px">{% for message in messages %}<div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-info{% endif %}" role="alert" style="border-radius:8px;padding:12px 16px;margin-bottom:8px">{{ message }}</div>{% endfor %}</div>{% endif %}
 <section class="page-intro"><div><p class="status-pill status-{{ object.status_pesanan|lower }}">{{ object.get_status_pesanan_display }}</p><h1>Reservasi Anda siap ditinjau</h1><p>Periksa kembali detail menginap sebelum menyelesaikan pembayaran.</p></div><span class="step-label">02 <i></i> 03</span></section>
 <div class="reservation-layout">
     {% if object.status_pesanan == 'CHECKED_OUT' and not object.review %}<a class="button btn btn-danger button-dark" href="{% url 'review_create' object.pk %}">Berikan Review</a>{% endif %}

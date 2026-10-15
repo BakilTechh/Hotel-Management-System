@@ -14,7 +14,7 @@
 <body class="room-detail-page">
 <header class="site-header">
     <a class="brand" href="{% url 'home' %}"><img class="brand-logo" src="{% static 'dashboard/images/logo.svg' %}" alt="Nocturn Haven"></a>
-    <nav class="main-nav"><a href="{% url 'home' %}">Home</a><a class="active" href="{% url 'room_list' %}">Room &amp; Suites</a><a href="{% url 'home' %}#facilities">Facilities</a><a href="{% url 'home' %}#offers">Offers</a><a href="{% url 'room_service_chat' %}">Room Service</a></nav>
+    <nav class="main-nav"><a href="{% url 'home' %}">Home</a><a class="active" href="{% url 'room_list' %}">Room &amp; Suites</a><a href="{% url 'home' %}#facilities">Facilities</a><a href="{% url 'home' %}#offers">Offers</a><a href="{% url 'review_list' %}">Ulasan Tamu</a><a href="{% url 'room_service_chat' %}">Room Service</a>{% if user.is_staff %}<a href="{% url 'reception' %}">Resepsionis</a>{% endif %}</nav>
     <div class="header-actions">{% if user.is_authenticated %}<span class="language">Halo, {{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="language logout-button" type="submit">Keluar</button></form>{% else %}<a class="language" href="{% url 'login' %}">Masuk</a>{% endif %}<a class="button btn btn-danger button-dark" href="{% url 'booking_create' %}">Pesan Sekarang</a></div>
 </header>
 <main class="room-detail-main">
@@ -37,6 +37,18 @@
                 {% endfor %}
             </div>
             {% endif %}
+            <h2>Ulasan tamu{% if rating_count %} ({{ rating_average|floatformat:1 }}/5 dari {{ rating_count }}){% endif %}</h2>
+            <div class="guest-reviews" style="display:flex;flex-direction:column;gap:10px;margin:12px 0">
+                {% for review in reviews %}
+                <div class="review-item" style="padding:12px 16px;background:#f7f8fc;border-radius:8px">
+                    <strong>{{ review.guest.username }}</strong> <span style="color:#a17320">{{ review.rating }}/5</span>
+                    <small style="display:block;color:#68748a">{{ review.created_at|date:'d M Y' }}</small>
+                    <p style="margin:6px 0 0">{% if review.comment %}{{ review.comment }}{% else %}<em>Tamu tidak menuliskan komentar.</em>{% endif %}</p>
+                </div>
+                {% empty %}
+                <p>Belum ada ulasan untuk kamar ini.</p>
+                {% endfor %}
+            </div>
             <div class="detail-booking"><div><small>Mulai dari</small><strong>Rp {{ room.price }} <em>/ malam</em></strong></div><a class="button btn btn-danger button-dark" href="{% url 'booking_create' %}?room={{ room.id }}">Pesan Kamar Ini →</a></div>
         </section>
     </div>

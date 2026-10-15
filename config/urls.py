@@ -19,12 +19,11 @@ URL configuration for config project.
 """
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path, include  # <-- 1. Tambahkan include di sini
-from django.views.generic import RedirectView
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from dashboard.views import DashboardView
-from rooms.views import room_detail, room_list
+from rooms.views import room_detail, room_list, review_list
 
 
 def health_check(request):
@@ -39,6 +38,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('rooms/', room_list, name='room_list'),
+    path('rooms/ulasan/', review_list, name='review_list'),
     path('rooms/<int:pk>/', room_detail, name='room_detail'),
     path('reservations/', include('reservations.urls')),
     path('room-service/', include('chatbot.urls')),
