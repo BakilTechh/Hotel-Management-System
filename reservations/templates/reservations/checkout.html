@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="mb-4">
+    <span class="text-uppercase text-muted small fw-bold">LAYANAN RESERVASI • Langkah 3 dari 4</span>
+    <h2 class="font-serif fw-bold text-dark">Konfirmasi & Data Pemesanan Kamar</h2>
+  </div>
+
+  <div class="row g-4">
+\    <div class="col-lg-8">
+      <div class="card nh-card p-4 mb-4">
+        <h5 class="font-serif fw-bold mb-3"><i class="fa-regular fa-id-card me-2"></i> Data Profil Tamu Utama</h5>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Nama Lengkap (Sesuai KTP/Paspor) *</label>
+              <input type="text" class="form-control bg-light" value="Alexander Wright">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Alamat Email *</label>
+              <input type="email" class="form-control bg-light" value="kamuwowo@example.com">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Nomor Telepon / WhatsApp *</label>
+              <input type="text" class="form-control bg-light" value="676767">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-bold">Perkiraan Waktu Kedatangan</label>
+              <select class="form-select bg-light">
+                <option>14:00 - 16:00 (Standar Check-in)</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card nh-card p-4">
+        <h5 class="font-serif fw-bold mb-3">Rincian Folio</h5>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Tarif Kamar (3 Malam)</span>
+          <span>Rp 9.600.000</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Biaya Layanan 10%</span>
+          <span>Rp 960.000</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-3">
+          <span class="text-muted">Pajak Daerah 5%</span>
+          <span>Rp 480.000</span>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <span class="fw-bold">TOTAL PEMBAYARAN</span>
+          <span class="font-serif fw-bold text-danger fs-4">Rp 11.040.000</span>
+        </div>
+        <button class="btn btn-nh-maroon w-100 py-2.5 rounded-3 fw-bold">
+          <i class="fa-solid fa-lock me-1"></i> Konfirmasi & Lanjut ke Pembayaran &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
