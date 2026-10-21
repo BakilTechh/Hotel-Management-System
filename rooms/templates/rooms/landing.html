@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section Banner -->
+<section class="position-relative py-5" style="background: linear-gradient(180deg, #d4af37 0%, #b8860b 100%); color: white;">
+  <div class="container text-center py-4">
+    <span class="badge bg-dark text-warning rounded-pill px-3 py-2 mb-3 text-uppercase fs-7 fw-bold">
+      ✦ TEMPAT REHAT DI KAWASAN ELEGAN
+    </span>
+    <h1 class="display-4 font-serif fw-bold mb-3">Rasakan Keramahan Abadi & Kenyamanan Mewah</h1>
+    <p class="lead opacity-90 mx-auto" style="max-width: 680px;">
+      Nikmati kemewahan dan ketenangan terbaik di hotel kami yang dirancang untuk pengalaman menginap tak terlupakan.
+    </p>
+
+    <!-- Floating Search / Filter Form Bar -->
+    <div class="card border-0 shadow-lg mt-4 mx-auto text-dark text-start p-3 rounded-4" style="max-width: 980px; background: rgba(255,255,255,0.95);">
+      <div class="row g-2 align-items-center">
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1"><i class="fa-regular fa-calendar me-1"></i> CHECK-IN</label>
+          <input type="date" class="form-control form-control-sm border-0 bg-light" value="2026-10-24">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1"><i class="fa-regular fa-calendar me-1"></i> CHECK-OUT</label>
+          <input type="date" class="form-control form-control-sm border-0 bg-light" value="2026-10-27">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1"><i class="fa-solid fa-user-group me-1"></i> TAMU & KAMAR</label>
+          <select class="form-select form-select-sm border-0 bg-light">
+            <option>2 Dewasa, 0 Anak</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted mb-1"><i class="fa-solid fa-bed me-1"></i> ROOM TYPE</label>
+          <select class="form-select form-select-sm border-0 bg-light">
+            <option>Suite</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-3 text-start">
+        <button class="btn btn-nh-maroon rounded-3 px-4 py-2">
+          <i class="fa-solid fa-magnifying-glass me-2"></i> Cek Ketersediaan
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Section Accomodation Grid -->
+<section class="py-5 container">
+  <div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+      <span class="text-uppercase text-muted small fw-bold">PILHAN SUITE & AKOMODASI</span>
+      <h2 class="font-serif fw-bold text-dark mb-0">Accomodation</h2>
+    </div>
+    <a href="#" class="text-decoration-none text-danger fw-bold small">Lihat Semua (12 Akomodasi) &rarr;</a>
+  </div>
+
+  <div class="row g-4">
+    <!-- Card 1 -->
+    <div class="col-md-4">
+      <div class="card nh-card h-100 overflow-hidden">
+        <div class="position-relative">
+          <img src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600" class="card-img-top" alt="Kamar Deluxe King" style="height: 220px; object-fit: cover;">
+          <span class="badge badge-maroon position-absolute top-0 start-0 m-3 rounded-2">PILIHAN POPULER</span>
+          <span class="position-absolute bottom-0 end-0 m-3 badge bg-dark opacity-75">Rp 1.800.000 / malam</span>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="font-serif fw-bold">Kamar Deluxe King</h5>
+          <p class="text-muted small">Suasana kamar yang hangat dan tenang dengan pemandangan taman.</p>
+          <div class="d-flex gap-3 text-muted small mb-3">
+            <span><i class="fa-solid fa-user me-1"></i> 2 Tamu</span>
+            <span><i class="fa-solid fa-expand me-1"></i> 35 m²</span>
+            <span><i class="fa-solid fa-tree me-1"></i> Pemandangan Taman</span>
+          </div>
+          <div class="mt-auto d-flex gap-2">
+            <a href="#" class="btn btn-nh-outline flex-fill rounded-3">Lihat Detail</a>
+            <a href="#" class="btn btn-nh-maroon flex-fill rounded-3">Pesan Sekarang</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="col-md-4">
+      <div class="card nh-card h-100 overflow-hidden">
+        <div class="position-relative">
+          <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600" class="card-img-top" alt="Suite Eksekutif Horizon" style="height: 220px; object-fit: cover;">
+          <span class="badge badge-gold position-absolute top-0 start-0 m-3 rounded-2">DISKON 20% OFF</span>
+          <span class="position-absolute bottom-0 end-0 m-3 badge bg-dark opacity-75">Rp 3.200.000 / malam</span>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="font-serif fw-bold">Suite Eksekutif Horizon</h5>
+          <p class="text-muted small">Ruang luas dengan pemandangan horizon laut lepas yang memukau.</p>
+          <div class="d-flex gap-3 text-muted small mb-3">
+            <span><i class="fa-solid fa-user me-1"></i> 3 Tamu</span>
+            <span><i class="fa-solid fa-expand me-1"></i> 65 m²</span>
+            <span><i class="fa-solid fa-water me-1"></i> Pemandangan Laut</span>
+          </div>
+          <div class="mt-auto d-flex gap-2">
+            <a href="#" class="btn btn-nh-outline flex-fill rounded-3">Lihat Detail</a>
+            <a href="#" class="btn btn-nh-maroon flex-fill rounded-3">Pesan Sekarang</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="col-md-4">
+      <div class="card nh-card h-100 overflow-hidden">
+        <div class="position-relative">
+          <img src="https://images.unsplash.com/photo-1591088398332-8a7791972843?w=600" class="card-img-top" alt="Grand Suite Presidensial" style="height: 220px; object-fit: cover;">
+          <span class="badge bg-dark text-white position-absolute top-0 start-0 m-3 rounded-2">HANYA TERSISA 1 UNIT</span>
+          <span class="position-absolute bottom-0 end-0 m-3 badge bg-dark opacity-75">Rp 5.500.000 / malam</span>
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="font-serif fw-bold">Grand Suite Presidensial</h5>
+          <p class="text-muted small">Kemewahan tanpa kompromi dengan teras pribadi dan fasilitas bintang 5.</p>
+          <div class="d-flex gap-3 text-muted small mb-3">
+            <span><i class="fa-solid fa-user me-1"></i> 4 Tamu</span>
+            <span><i class="fa-solid fa-expand me-1"></i> 110 m²</span>
+            <span><i class="fa-solid fa-star me-1"></i> Teras Pribadi</span>
+          </div>
+          <div class="mt-auto d-flex gap-2">
+            <a href="#" class="btn btn-nh-outline flex-fill rounded-3">Lihat Detail</a>
+            <a href="#" class="btn btn-nh-maroon flex-fill rounded-3">Pesan Sekarang</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
