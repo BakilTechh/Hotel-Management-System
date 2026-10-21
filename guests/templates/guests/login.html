@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5 d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card border-0 shadow-sm p-4 p-md-5 rounded-4" style="max-width: 520px; width: 100%; background: #ffffff;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <a href="#" class="text-decoration-none text-muted small"><i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Beranda Hotel</a>
+      <span class="badge bg-light text-dark border rounded-pill px-3">PORTAL TAMU</span>
+    </div>
+
+    <div class="text-center mb-4">
+      <div class="bg-dark text-warning p-2 rounded-3 d-inline-block mb-2" style="width: 48px; height: 48px;">
+        <i class="fa-solid fa-hotel fs-4"></i>
+      </div>
+      <p class="text-uppercase text-warning fw-bold small mb-1" style="letter-spacing: 1px;">CONCIERGE & RESERVASI MANDIRI</p>
+      <h3 class="font-serif fw-bold text-dark">Masuk ke Akun Tamu</h3>
+      <p class="text-muted small">Akses reservasi kamar, status verifikasi pembayaran, dan kelola pengalaman menginap Anda.</p>
+    </div>
+
+    <div class="alert alert-light border small d-flex gap-2 mb-4" role="alert">
+      <i class="fa-solid fa-circle-info text-primary fs-5"></i>
+      <div>
+        <strong>Petunjuk Akses Akun</strong><br>
+        Masukkan email & kata sandi yang terdaftar pada bukti reservasi Anda.
+      </div>
+    </div>
+
+      
+    <form method="POST">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Alamat Email *</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><i class="fa-regular fa-envelope text-muted"></i></span>
+          <input type="email" class="form-control border-start-0 bg-light" placeholder="contoh@email.com" required>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between">
+          <label class="form-label small fw-bold">Kata Sandi *</label>
+          <a href="#" class="text-decoration-none small text-muted">Lupa Kata Sandi?</a>
+        </div>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-lock text-muted"></i></span>
+          <input type="password" class="form-control border-start-0 bg-light" placeholder="••••••••••••" required>
+          <span class="input-group-text bg-light"><i class="fa-regular fa-eye text-muted"></i></span>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mb-4 small">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="rememberMe">
+          <label class="form-check-label text-muted" for="rememberMe">Ingat Saya di Perangkat Ini</label>
+        </div>
+        <span class="text-success"><i class="fa-solid fa-shield-halved me-1"></i> Aman</span>
+      </div>
+
+      <button type="submit" class="btn btn-nh-gold w-100 py-2.5 rounded-3 fw-bold mb-3">
+        Masuk ke Sistem <i class="fa-solid fa-arrow-right-to-bracket ms-1"></i>
+      </button>
+
+      <div class="text-center my-3 position-relative">
+        <hr>
+        <span class="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">ATAU</span>
+      </div>
+
+      <div class="text-center">
+        <p class="small text-muted mb-2">Belum memiliki akun tamu?</p>
+        <a href="#" class="btn btn-light w-100 border fw-bold rounded-3">Daftar Sekarang &rarr;</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
