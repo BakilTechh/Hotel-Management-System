@@ -2,7 +2,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView
 
 from reservations.models import Booking, Payment
-from rooms.models import Room
+from rooms.models import Room, RoomType
 
 
 class DashboardView(TemplateView):
@@ -11,6 +11,7 @@ class DashboardView(TemplateView):
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
 		rooms = list(Room.objects.select_related('room_type').all()[:3])
+		room_types = RoomType.objects.all()
 		bookings = Booking.objects.select_related('room').order_by('-created_at')
 
 		showcase_rooms = [
@@ -52,6 +53,7 @@ class DashboardView(TemplateView):
 
 		context.update({
 			'rooms': showcase_rooms,
+			'room_types': room_types,
 			'recent_bookings': bookings[:4],
 			'room_count': Room.objects.count(),
 			'booking_count': Booking.objects.count(),

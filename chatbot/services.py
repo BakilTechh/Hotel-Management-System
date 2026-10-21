@@ -91,7 +91,7 @@ def get_hotel_context():
 
     today = hotel_today()
     try:
-        rooms = list(Room.objects.select_related('room_type').order_by('room_number'))
+        rooms = list(Room.objects.select_related('room_type').order_by('number'))
         if not rooms:
             return 'Belum ada data kamar di sistem. Arahkan tamu ke resepsionis.'
         booked = Booking.objects.filter(
@@ -114,7 +114,7 @@ def get_hotel_context():
                 state = 'TERSEDIA'
                 free += 1
             lines.append(
-                f'- {room.room_number} ({room.room_type.name}, '
+                f'- {room.number} ({room.room_type.name}, '
                 f'Rp {room.room_type.price_per_night:,.0f}/malam): {state}'
             )
         header = (

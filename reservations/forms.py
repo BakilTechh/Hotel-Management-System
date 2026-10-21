@@ -19,7 +19,7 @@ class BookingForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['room'].queryset = Room.objects.select_related('room_type').order_by('room_number')
+        self.fields['room'].queryset = Room.objects.select_related('room_type').order_by('number')
         self.fields['room'].empty_label = '— Pilih kamar —'
         self.fields['voucher'].queryset = PromoVoucher.objects.order_by('kode_voucher')
         self.fields['voucher'].required = False
@@ -31,6 +31,7 @@ class BookingForm(forms.ModelForm):
         check_in = cleaned_data.get('tanggal_check_in')
         check_out = cleaned_data.get('tanggal_check_out')
         guest_count = cleaned_data.get('jumlah_tamu')
+        voucher = cleaned_data.get('voucher')
 
         if not room or not check_in or not check_out or not guest_count:
             return cleaned_data
@@ -38,10 +39,17 @@ class BookingForm(forms.ModelForm):
             raise ValidationError('Tanggal check-out harus setelah check-in.')
         if guest_count > room.room_type.capacity:
             raise ValidationError(f'Kapasitas kamar maksimal {room.room_type.capacity} tamu.')
-        if room.status != 'CLEAN':
+        if room.status != 'CLEAN' or not room.is_active:
             raise ValidationError('Kamar yang dipilih belum siap untuk dipesan.')
         if not Booking.available_rooms(check_in, check_out).filter(pk=room.pk).exists():
             raise ValidationError('Kamar tidak tersedia pada periode tersebut.')
+        if voucher is not None:
+            durasi = (check_out - check_in).days
+            total_kamar = room.room_type.price_per_night * max(durasi, 1)
+            if not voucher.is_valid(total_kamar):
+                raise ValidationError(
+                    'Voucher tidak berlaku (kedaluwarsa, kuota habis, atau minimum transaksi belum terpenuhi).'
+                )
         return cleaned_data
 
 class PaymentForm(forms.ModelForm):

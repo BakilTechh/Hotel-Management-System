@@ -1,7 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from rooms.models import Room
 from reservations.forms import BookingForm, ReviewForm
@@ -23,15 +24,34 @@ class BookingFormSeedTest(TestCase):
         User.objects.create_user('tamu', password='p')
         self.client.force_login(User.objects.get(username='tamu'))
         resp = self.client.get('/reservations/buat/')
-        first_room = Room.objects.order_by('room_number').first()
-        self.assertContains(resp, first_room.room_number)
+        first_room = Room.objects.order_by('number').first()
+        self.assertContains(resp, first_room.number)
         self.assertContains(resp, PromoVoucher.objects.order_by('kode_voucher').first().kode_voucher)
+
+    def test_booking_creation_creates_unpaid_payment_record(self):
+        user = User.objects.create_user('payment-seed-guest', password='p')
+        self.client.force_login(user)
+        room = Room.objects.order_by('number').first()
+
+        response = self.client.post('/reservations/buat/', {
+            'room': room.pk,
+            'tanggal_check_in': '2027-02-01',
+            'tanggal_check_out': '2027-02-02',
+            'jumlah_tamu': 1,
+            'voucher': '',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        booking = Booking.objects.get(user=user)
+        payment = Payment.objects.get(booking=booking)
+        self.assertEqual(payment.status_pembayaran, 'UNPAID')
+        self.assertEqual(payment.amount, booking.total_biaya_akhir)
 
     def test_available_rooms_excludes_overlap_and_non_clean_room(self):
         from datetime import timedelta
 
         user = User.objects.create_user('booked-guest', password='p')
-        rooms = list(Room.objects.order_by('room_number')[:3])
+        rooms = list(Room.objects.order_by('number')[:3])
         rooms[1].status = 'MAINTENANCE'
         rooms[1].save()
         start = date(2026, 10, 9)
@@ -52,7 +72,7 @@ class BookingFormSeedTest(TestCase):
         self.assertIn(rooms[2].pk, available)
 
     def test_booking_form_rejects_invalid_dates(self):
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         form = BookingForm(data={
             'room': room.pk,
             'tanggal_check_in': '2026-10-12',
@@ -64,7 +84,7 @@ class BookingFormSeedTest(TestCase):
         self.assertIn('Tanggal check-out harus setelah check-in.', form.non_field_errors())
 
     def test_booking_form_rejects_capacity_overflow(self):
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         form = BookingForm(data={
             'room': room.pk,
             'tanggal_check_in': '2026-10-12',
@@ -77,7 +97,7 @@ class BookingFormSeedTest(TestCase):
 
     def test_booking_form_rejects_overlapping_room(self):
         user = User.objects.create_user('overlap-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         Booking.objects.create(
             user=user,
             room=room,
@@ -100,7 +120,7 @@ class BookingFormSeedTest(TestCase):
 class PaymentVerificationFlowTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('tamu', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 10, 9), tanggal_check_out=date(2026, 10, 10),
@@ -161,7 +181,7 @@ class PaymentVerificationFlowTest(TestCase):
 class BookingCheckInTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('checkin-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 12, 15), tanggal_check_out=date(2026, 12, 16),
@@ -187,7 +207,7 @@ class BookingCheckInTest(TestCase):
 class BookingCheckOutTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('checkout-guest', password='p')
-        self.room = Room.objects.order_by('room_number').first()
+        self.room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=self.room,
             tanggal_check_in=date(2026, 12, 20), tanggal_check_out=date(2026, 12, 21),
@@ -215,7 +235,7 @@ class BookingCheckOutTest(TestCase):
 class BookingHistoryTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('tamu', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 10, 9), tanggal_check_out=date(2026, 10, 10),
@@ -232,11 +252,11 @@ class BookingHistoryTest(TestCase):
         self.client.force_login(self.user)
         resp = self.client.get('/reservations/riwayat/')
         self.assertContains(resp, f'NH-{self.booking.pk:04d}')
-        self.assertContains(resp, self.booking.room.room_number)
+        self.assertContains(resp, self.booking.room.number)
 
     def test_list_hides_other_guests_bookings(self):
         other_user = User.objects.create_user('other-history-guest', password='p')
-        other_room = Room.objects.order_by('room_number').last()
+        other_room = Room.objects.order_by('number').last()
         other_booking = Booking.objects.create(
             user=other_user,
             room=other_room,
@@ -268,7 +288,7 @@ class BookingDetailAccessTest(TestCase):
         self.owner = User.objects.create_user('owner', password='p')
         self.other_guest = User.objects.create_user('other', password='p')
         self.admin = User.objects.create_superuser('detail-admin', 'admin@test.com', 'p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.owner,
             room=room,
@@ -296,7 +316,7 @@ class BookingDetailAccessTest(TestCase):
 class BookingCancellationTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('cancel-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 12, 10), tanggal_check_out=date(2026, 12, 11),
@@ -322,7 +342,7 @@ class BookingCancellationTest(TestCase):
 
 
 class BookingAdminPropagationTest(TestCase):
-    def test_confirm_in_admin_verifies_payment(self):
+    def test_admin_cannot_confirm_without_verified_payment(self):
         from django.contrib.admin.sites import AdminSite
         from django.test import RequestFactory
 
@@ -330,7 +350,7 @@ class BookingAdminPropagationTest(TestCase):
 
         staff = User.objects.create_superuser('staf', 'staf@test.com', 'p')
         user = User.objects.create_user('tamu', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         booking = Booking.objects.create(
             user=user, room=room,
             tanggal_check_in=date(2026, 10, 9), tanggal_check_out=date(2026, 10, 10),
@@ -347,15 +367,15 @@ class BookingAdminPropagationTest(TestCase):
         request._messages = CookieStorage(request)
         BookingAdmin(Booking, AdminSite()).save_model(request, booking, form=None, change=True)
         payment.refresh_from_db()
-        self.assertEqual(payment.status_pembayaran, 'VERIFIED')
-        self.assertEqual(payment.verified_by, staff)
-        self.assertIsNotNone(payment.verified_at)
+        booking.refresh_from_db()
+        self.assertEqual(payment.status_pembayaran, 'PENDING_VERIFICATION')
+        self.assertEqual(booking.status_pesanan, 'PENDING_PAYMENT')
 
 
 class ReviewFeatureTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('review-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 12, 25), tanggal_check_out=date(2026, 12, 26),
@@ -394,3 +414,160 @@ class ReviewFeatureTest(TestCase):
         form = ReviewForm(data={'rating': 6, 'comment': 'Invalid'})
 
         self.assertFalse(form.is_valid())
+
+
+class VoucherUsageTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('voucher-guest', password='p')
+        self.client.force_login(self.user)
+
+    def test_booking_decrements_voucher_quota(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        initial_quota = voucher.kuota_penggunaan
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=30)
+
+        response = self.client.post('/reservations/buat/', {
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.kuota_penggunaan, initial_quota - 1)
+
+    def test_booking_without_voucher_keeps_quota(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        initial_quota = voucher.kuota_penggunaan
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=40)
+
+        self.client.post('/reservations/buat/', {
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': '',
+        })
+
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.kuota_penggunaan, initial_quota)
+
+    def test_expired_voucher_is_rejected(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        voucher.tanggal_kedaluwarsa = timezone.now() - timedelta(days=1)
+        voucher.save()
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=50)
+
+        form = BookingForm(data={
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('Voucher tidak berlaku', form.non_field_errors()[0])
+
+    def test_exhausted_voucher_is_rejected(self):
+        voucher = PromoVoucher.objects.get(kode_voucher='HEMAT10')
+        voucher.kuota_penggunaan = 0
+        voucher.save()
+        room = Room.objects.order_by('number').first()
+        start = timezone.localdate() + timedelta(days=60)
+
+        form = BookingForm(data={
+            'room': room.pk,
+            'tanggal_check_in': start.isoformat(),
+            'tanggal_check_out': (start + timedelta(days=1)).isoformat(),
+            'jumlah_tamu': 1,
+            'voucher': voucher.pk,
+        })
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('Voucher tidak berlaku', form.non_field_errors()[0])
+
+
+class ReceptionViewTest(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user('front-desk', password='p', is_staff=True)
+        self.guest = User.objects.create_user('walk-in', password='p')
+        self.room = Room.objects.order_by('number').first()
+
+    def test_staff_can_open_reception_page(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Meja resepsionis')
+
+    def test_guest_is_forbidden_from_reception_page(self):
+        self.client.force_login(self.guest)
+
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_is_redirected_to_login(self):
+        response = self.client.get('/reservations/resepsionis/')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response.url)
+
+    def test_staff_can_check_in_guest_on_arrival_day(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate(),
+            tanggal_check_out=timezone.localdate() + timedelta(days=1),
+            jumlah_tamu=1, status_pesanan='CONFIRMED',
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_in',
+        })
+
+        self.assertRedirects(response, '/reservations/resepsionis/')
+        booking.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CHECKED_IN')
+
+    def test_early_check_in_is_blocked(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate() + timedelta(days=5),
+            tanggal_check_out=timezone.localdate() + timedelta(days=6),
+            jumlah_tamu=1, status_pesanan='CONFIRMED',
+        )
+        self.client.force_login(self.staff)
+
+        self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_in',
+        })
+
+        booking.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CONFIRMED')
+
+    def test_staff_can_check_out_in_house_guest(self):
+        booking = Booking.objects.create(
+            user=self.guest, room=self.room,
+            tanggal_check_in=timezone.localdate() - timedelta(days=1),
+            tanggal_check_out=timezone.localdate(),
+            jumlah_tamu=1, status_pesanan='CHECKED_IN',
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post('/reservations/resepsionis/', {
+            'booking_id': booking.pk, 'action': 'check_out',
+        })
+
+        self.assertRedirects(response, '/reservations/resepsionis/')
+        booking.refresh_from_db()
+        self.room.refresh_from_db()
+        self.assertEqual(booking.status_pesanan, 'CHECKED_OUT')
+        self.assertEqual(self.room.status, 'DIRTY')

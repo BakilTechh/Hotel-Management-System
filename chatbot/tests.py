@@ -36,7 +36,7 @@ class ChatbotServiceTest(TestCase):
         from .services import get_hotel_context, hotel_today
 
         user = User.objects.create_user('tamu', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         today = hotel_today()
         Booking.objects.create(
             user=user, room=room,
@@ -45,7 +45,7 @@ class ChatbotServiceTest(TestCase):
         )
         context = get_hotel_context()
         self.assertIn(f'Tanggal hari ini: {today:%d %b %Y}', context)
-        self.assertIn(f'- {room.room_number} (', context)
+        self.assertIn(f'- {room.number} (', context)
         self.assertIn('TERPESAN hari ini', context)
         self.assertIn('TERSEDIA', context)
         self.assertIn('Check-in 14:00', context)
@@ -188,7 +188,7 @@ class ChatbotBookingStatusTest(TestCase):
 
         self.user = User.objects.create_user('tamu', password='p')
         self.client.force_login(self.user)
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.user, room=room,
             tanggal_check_in=date(2026, 10, 9), tanggal_check_out=date(2026, 10, 10),

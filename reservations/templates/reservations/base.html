@@ -15,12 +15,13 @@
 <body class="reservation-page">
     <header class="site-header">
         <a class="brand" href="{% url 'home' %}"><img class="brand-logo" src="{% static 'dashboard/images/logo.svg' %}" alt="Nocturn Haven"></a>
-        <nav class="main-nav" aria-label="Navigasi utama"><a href="{% url 'home' %}">Home</a><a class="active" href="{% url 'room_list' %}">Room &amp; Suites</a><a href="{% url 'home' %}#facilities">Facilities</a><a href="{% url 'home' %}#offers">Offers</a></nav>
-        {% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button btn btn-danger button-dark" type="submit">Keluar</button></form>{% else %}<a class="button btn btn-danger button-dark" href="{% url 'login' %}">Masuk</a>{% endif %}
+        <nav class="main-nav" aria-label="Navigasi utama"><a href="{% url 'home' %}">Home</a><a class="active" href="{% url 'room_list' %}">Room &amp; Suites</a><a href="{% url 'home' %}#facilities">Facilities</a><a href="{% url 'home' %}#offers">Offers</a><a href="{% url 'review_list' %}">Ulasan Tamu</a><a href="{% url 'room_service_chat' %}">Room Service</a>{% if user.is_staff %}<a href="{% url 'reception' %}">Resepsionis</a>{% endif %}</nav>
+        <div class="header-actions">{% if user.is_authenticated %}<span class="language">Halo, {{ user.username }}</span><a class="language" href="{% url 'booking_list' %}">Pemesanan Saya</a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="button btn btn-danger button-dark" type="submit">Keluar</button></form>{% else %}<a class="button btn btn-danger button-dark" href="{% url 'login' %}">Masuk</a>{% endif %}</div>
     </header>
     <main class="reservation-main">
         <div class="reservation-container">
             <p class="eyebrow">Nocturn Haven <span></span> Pengalaman menginap yang tenang</p>
+            {% if messages %}<div class="messages-container" style="margin-bottom:16px">{% for message in messages %}<div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-info{% endif %}" role="alert" style="border-radius:8px;padding:12px 16px;margin-bottom:8px">{{ message }}</div>{% endfor %}</div>{% endif %}
             {% block content %}{% endblock %}
         </div>
     </main>

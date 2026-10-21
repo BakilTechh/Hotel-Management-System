@@ -7,8 +7,8 @@ from .models import GuestProfile
 
 
 class AccountLoginForm(AuthenticationForm):
-    username = forms.EmailField(label='Email', widget=forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'current-password'}))
+    username = forms.EmailField(label='Email', widget=forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email', 'placeholder': 'contoh@email.com'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'current-password', 'placeholder': 'Masukkan kata sandi'}))
 
     def clean(self):
         email = self.cleaned_data.get('username')
@@ -29,16 +29,16 @@ class AccountLoginForm(AuthenticationForm):
 
 
 class AccountRegisterForm(UserCreationForm):
-    full_name = forms.CharField(label='Nama lengkap', max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'name'}))
-    email = forms.EmailField(label='Email', widget=forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email'}))
-    phone_number = forms.CharField(label='Nomor telepon', max_length=30, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'tel'}))
+    full_name = forms.CharField(label='Nama lengkap', max_length=150, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'name', 'placeholder': 'Contoh: Alexander Wright'}))
+    email = forms.EmailField(label='Email', widget=forms.EmailInput(attrs={'class': 'form-control', 'autocomplete': 'email', 'placeholder': 'alexander.wright@luxurystay.com'}))
+    phone_number = forms.CharField(label='Nomor telepon', max_length=30, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'tel', 'placeholder': '+62 812-3456-7890'}))
 
     class Meta:
         model = User
         fields = ('full_name', 'email', 'phone_number', 'password1', 'password2')
 
-    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}))
-    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}))
+    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password', 'placeholder': 'Min. 8 karakter'}))
+    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password', 'placeholder': 'Ulangi kata sandi'}))
 
     def clean_email(self):
         email = self.cleaned_data['email'].lower().strip()

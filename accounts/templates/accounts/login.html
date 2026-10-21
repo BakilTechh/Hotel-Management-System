@@ -1,7 +1,10 @@
 {% extends 'accounts/base.html' %}
+{% load static %}
 {% block title %}Masuk{% endblock %}
 {% block content %}
-<p class="eyebrow">Selamat datang kembali <span></span></p><h1>Masuk ke Nocturn Haven</h1><p class="auth-subtitle">Kelola reservasi dan nikmati perjalanan yang terasa lebih personal.</p>
-<form method="post" class="auth-form">{% csrf_token %}{% if form.non_field_errors %}<div class="auth-error">{{ form.non_field_errors|striptags }}</div>{% endif %}<label>Email{{ form.username }}</label><label>Password{{ form.password }}</label><input type="hidden" name="next" value="{{ next }}"><button class="button btn btn-danger button-dark" type="submit">Masuk <span>→</span></button></form>
-<p class="auth-switch">Belum memiliki akun? <a href="{% url 'register' %}">Daftar sekarang</a></p>
+<div class="auth-brand"><img class="auth-logo" src="{% static 'dashboard/images/logo.svg' %}" alt="Sistem Manajemen Hotel"><strong>SISTEM MANAJEMEN</strong><small>HOTEL</small></div>
+<p class="auth-kicker">CONCIERGE &amp; RESERVASI MANDIRI</p><h1>Masuk ke Akun Tamu</h1><p class="auth-subtitle">Akses reservasi kamar, status verifikasi pembayaran, dan kelola pengalaman menginap Anda.</p>
+<div class="auth-notice"><b>i</b><span><strong>Petunjuk Akses Akun</strong><small>Masukkan email &amp; kata sandi yang terdaftar pada bukti reservasi Anda.</small></span></div>
+<form method="post" class="auth-form">{% csrf_token %}{% if form.non_field_errors %}<div class="auth-error">{{ form.non_field_errors|striptags }}</div>{% endif %}<label><span>Alamat Email <em>*</em></span>{{ form.username }}{% if form.username.errors %}<small>{{ form.username.errors|striptags }}</small>{% endif %}</label><label><span>Kata Sandi <em>*</em></span>{{ form.password }}{% if form.password.errors %}<small>{{ form.password.errors|striptags }}</small>{% endif %}</label><div class="auth-options"><label class="check-row"><input type="checkbox"> <span>Ingat Saya di Perangkat Ini</span></label><span class="secure-label">Aman</span></div><input type="hidden" name="next" value="{{ next }}"><button class="auth-submit" type="submit">Masuk ke Sistem <span>-&gt;</span></button></form>
+<div class="auth-divider"><span>ATAU</span></div><p class="auth-switch">Belum memiliki akun tamu?</p><a class="auth-secondary" href="{% url 'register' %}">Daftar Sekarang <span>-&gt;</span></a><p class="auth-security">SSL 256-bit menjaga kerahasiaan data reservasi Anda.</p>
 {% endblock %}

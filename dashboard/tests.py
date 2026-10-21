@@ -18,7 +18,7 @@ class ReportFeatureTest(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser('report-admin', 'report@test.com', 'p')
         self.guest = User.objects.create_user('report-guest', password='p')
-        room = Room.objects.order_by('room_number').first()
+        room = Room.objects.order_by('number').first()
         self.booking = Booking.objects.create(
             user=self.guest, room=room,
             tanggal_check_in=date(2027, 1, 1), tanggal_check_out=date(2027, 1, 2),
@@ -45,3 +45,14 @@ class ReportFeatureTest(TestCase):
         self.assertEqual(response.context['total_bookings'], 1)
         self.assertEqual(response.context['confirmed_bookings'], 1)
         self.assertEqual(response.context['verified_payments'], 1)
+
+
+class DashboardNavigationTest(TestCase):
+    def test_dashboard_links_to_room_search_and_real_room_detail(self):
+        room = Room.objects.order_by('number').first()
+
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/rooms/"')
+        self.assertContains(response, f'href="/rooms/{room.pk}/"')

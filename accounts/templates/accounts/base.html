@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Akun{% endblock %} | Nocturn Haven</title>
+    <title>{% block title %}Akun{% endblock %} | Sistem Manajemen Hotel</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
@@ -13,7 +13,8 @@
     <link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
 </head>
 <body class="auth-page">
-    <header class="site-header"><a class="brand" href="{% url 'home' %}"><img class="brand-logo" src="{% static 'dashboard/images/logo.svg' %}" alt="Nocturn Haven"></a><a class="text-link" href="{% url 'home' %}">Kembali ke beranda</a></header>
-    <main class="auth-main"><section class="auth-card"><img class="auth-logo" src="{% static 'dashboard/images/logo.svg' %}" alt="Nocturn Haven">{% block content %}{% endblock %}</section></main>
+    <header class="auth-topbar"><a class="auth-back" href="{% url 'home' %}"><span>&lt;-</span> Kembali ke Beranda Hotel</a><span class="portal-badge"><i></i> PORTAL TAMU</span></header>
+    <main class="auth-main"><section class="auth-card">{% block content %}{% endblock %}</section></main>
+    <footer class="auth-footer">Butuh bantuan mendesak saat check-in? Hubungi Resepsionis di +62 (21) 5000-999</footer>
 </body>
 </html>
