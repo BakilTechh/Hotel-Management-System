@@ -1,54 +1,22 @@
-"""Business logic for the Nocturn Haven room-service chatbot.
+"""Gemini integration for the Nocturn Haven concierge assistant.
 
-Rule-based flow handles the structured ordering shown in the design
-(service -> items -> reservation code -> confirm) entirely server-side,
-so reservation data can never be hallucinated. Gemini is used only as
-a fallback for open-ended hospitality Q&A.
+The conversational room-service page was retired in favour of the structured
+portal ordering flow, so this module now holds only what the assistant
+integration needs: the system prompt, a live hotel snapshot used as grounding
+context, and the Gemini REST call with its error handling.
 """
 import logging
-import re
 
 import requests
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-SERVICE_LABELS = {
-    'FOOD': 'Pesan Makanan & Minuman',
-    'AMENITIES': 'Request Amenities',
-    'EXTRA_BED': 'Request Extra Bed',
-    'LAUNDRY': 'Laundry',
-    'RECEPTION': 'Chat dengan Resepsionis',
-}
-
-FOOD_MENU = ['Nasi Goreng', 'Mie Goreng', 'Ayam Bakar', 'Lainnya']
-
-# Stock food photos served from local static files
-# (chatbot/static/chatbot/img/). To swap an image, replace the file —
-# no code change needed.
-FOOD_IMAGES = {
-    'Nasi Goreng': 'chatbot/img/nasi-goreng.jpg',
-    'Mie Goreng': 'chatbot/img/mie-goreng.jpg',
-    'Ayam Bakar': 'chatbot/img/ayam-bakar.jpg',
-}
-
-
-def food_cards():
-    """Menu items as image cards: [{label, image}]. URLs are absolute-path."""
-    from django.templatetags.static import static
-    cards = []
-    for label, path in FOOD_IMAGES.items():
-        url = static(path)
-        if not url.startswith(('http://', 'https://', '/')):
-            url = '/' + url
-        cards.append({'label': label, 'image': url})
-    return cards
-
 SYSTEM_PROMPT = (
     'Kamu adalah Asisten Chat Hotel Nocturn Haven yang ramah dan profesional. '
     'Jawab dalam Bahasa Indonesia yang sopan dan ringkas (maksimal 3-4 kalimat, '
-    'kecuali diminta detail). Layanan yang tersedia: Pesan Makanan & Minuman '
-    '(Nasi Goreng, Mie Goreng, Ayam Bakar), Request Amenities, Request Extra Bed, '
+    'kecuali diminta detail). Layanan yang tersedia: Room Service (pesan makanan '
+    'dan minuman lewat Portal Tamu), Request Amenities, Request Extra Bed, '
     'Laundry, dan Chat dengan Resepsionis. Fasilitas hotel: Kolam Renang Infinity '
     'Horizon (06:00-22:00), Serenity Spa & Sauna, The Grand Dining & Lounge, '
     'Pusat Kebugaran 24 Jam. Check-in 14:00, check-out 12:00, gratis pembatalan '
@@ -63,7 +31,6 @@ SYSTEM_PROMPT = (
     'arahkan ke resepsionis. Jangan pernah menyebut kamu adalah model AI '
     'generik; kamu adalah Asisten Chat Nocturn Haven.'
 )
-
 
 STATUS_MENAHAN_KAMAR = ('PENDING_PAYMENT', 'CONFIRMED', 'CHECKED_IN')
 
@@ -139,7 +106,7 @@ def call_gemini(message, history=None):
     if not api_key:
         return (
             'Maaf, layanan AI sedang belum dikonfigurasi (GEMINI_API_KEY kosong). '
-            'Silakan pilih salah satu layanan di atas atau hubungi resepsionis. '
+            'Silakan lanjutkan lewat Portal Tamu atau hubungi resepsionis. '
             'Jika Anda admin, isi GEMINI_API_KEY di environment lalu restart server.'
         )
     model = getattr(settings, 'GEMINI_MODEL', 'gemini-3.8-flash')
@@ -168,7 +135,7 @@ def call_gemini(message, history=None):
                 if attempt == 2:
                     return (
                         'Maaf, AI kami tidak merespons tepat waktu. '
-                        'Silakan coba lagi sebentar lagi atau lanjutkan lewat menu layanan di atas.'
+                        'Silakan coba lagi sebentar lagi atau hubungi resepsionis.'
                     )
         resp.raise_for_status()
         data = resp.json()
@@ -178,7 +145,7 @@ def call_gemini(message, history=None):
             texts = [p.get('text', '') for p in parts if p.get('text')]
             if texts:
                 return ''.join(texts).strip()
-        return 'Maaf, saya belum menemukan jawaban. Bisa diulangi atau pilih layanan di atas?'
+        return 'Maaf, saya belum menemukan jawaban. Bisa diulangi?'
     except requests.RequestException as exc:
         detail = _gemini_error_detail(exc)
         logger.exception('Gemini API error: %s', detail)
@@ -187,16 +154,16 @@ def call_gemini(message, history=None):
                 'Maaf, model AI yang dikonfigurasi tidak ditemukan oleh Google '
                 f'({getattr(settings, "GEMINI_MODEL", "?")}). '
                 'Minta admin menjalankan `python manage.py check_gemini` untuk melihat '
-                'daftar model yang tersedia, atau lanjutkan lewat menu layanan di atas.'
+                'daftar model yang tersedia, atau hubungi resepsionis.'
             )
         if detail.startswith(('429', '503')) or 'overload' in detail.lower():
             return (
-                'Maaf, layanan AI sedang padat-padatnya. Coba lagi beberapa saat lagi, '
-                'atau lanjutkan lewat menu layanan di atas.'
+                'Maaf, layanan AI sedang padat-padanya. Coba lagi beberapa saat lagi, '
+                'atau hubungi resepsionis.'
             )
         return (
             'Maaf, koneksi ke asisten AI sedang terganggu. '
-            'Silakan coba lagi atau pilih layanan di atas / hubungi resepsionis.'
+            'Silakan coba lagi atau hubungi resepsionis.'
         )
 
 
@@ -210,34 +177,3 @@ def _gemini_error_detail(exc):
     except ValueError:
         message = response.text[:200]
     return f'{response.status_code} {message}' if message else f'{response.status_code} {exc}'
-
-
-def parse_food_items(text):
-    """Parse 'Nasi Goreng 1, Mie Goreng 3' into a normalized dict."""
-    found = {}
-    lowered = text.lower()
-    for menu in FOOD_MENU:
-        if menu == 'Lainnya':
-            continue
-        pattern = re.compile(re.escape(menu.lower()) + r'\s*(?:x\s*)?(\d+)?')
-        match = pattern.search(lowered)
-        if match:
-            qty = int(match.group(1)) if match.group(1) else 1
-            found[menu] = qty
-    # Fallback: "Lainnya: <teks>" or free text mentioning food
-    if not found and len(text.strip()) >= 2:
-        found[text.strip().title()[:80]] = 1
-    return found
-
-
-def format_items(items):
-    return '\n'.join(f'{name} x {qty}' for name, qty in items.items())
-
-
-def extract_booking_ref(text):
-    """Accept numeric IDs ('4091', 'GH-2024-4091' -> 4091, 'kode GH 4091')."""
-    matches = re.findall(r'(\d{1,10})', text or '')
-    if not matches:
-        return None
-    # Prefer the trailing code segment: GH-2024-4091 means booking 4091.
-    return int(matches[-1])

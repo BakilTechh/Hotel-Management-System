@@ -1,0 +1,249 @@
+{% extends 'dashboard/guest_base.html' %}
+{% load hotel_ui %}
+{% block title %}Room Service{% endblock %}
+{% block eyebrow %}Layanan Kamar{% endblock %}
+{% block page_title %}Room Service{% endblock %}
+{% block content %}
+<div class="nh-page-intro">
+    <div>
+        <p class="nh-kicker">Antar ke pintu kamar Anda</p>
+        <h2>Menu kamar &amp; kenyamanan.</h2>
+        <p>Pilih hidangan atau layanan, hubungkan dengan reservasi Anda, dan tim kami akan mengantarkannya.</p>
+    </div>
+    <a class="nh-button nh-button-ghost" href="mailto:hello@nocturnhaven.test">Hubungi Concierge</a>
+</div>
+
+{% if eligible_stay_count %}
+<div class="nh-room-service-layout">
+    <form class="nh-stack" method="post" id="room-service-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="nh-alert nh-alert-error" role="alert"><span class="nh-alert-dot" aria-hidden="true"></span><span>{{ form.non_field_errors|striptags }}</span></div>
+        {% endif %}
+
+        <section class="nh-card" aria-labelledby="menu-heading">
+            <div class="nh-card-heading">
+                <div><p class="nh-kicker">01 · Pilih menu</p><h2 id="menu-heading">Makanan &amp; minuman</h2></div>
+                <span class="nh-step">{{ eligible_stay_count }} stay aktif</span>
+            </div>
+
+            <div class="nh-menu-toolbar">
+                <div class="nh-menu-search">
+                    <label for="menu-search" class="nh-visually-hidden">Cari menu</label>
+                    <input id="menu-search" class="nh-input" type="search" placeholder="Cari menu, contoh: nasi, teh…" data-menu-search>
+                </div>
+                <div class="nh-menu-chips" role="group" aria-label="Filter kategori">
+                    <button type="button" class="is-active" data-menu-filter="all">Semua</button>
+                    <button type="button" data-menu-filter="FOOD">Makanan</button>
+                    <button type="button" data-menu-filter="BEVERAGE">Minuman</button>
+                    <button type="button" data-menu-filter="DESSERT">Penutup</button>
+                </div>
+            </div>
+
+            {% if menu_items %}
+            {% regroup menu_items by get_category_display as category_groups %}
+            {% for category in category_groups %}
+            <div class="nh-menu-section" data-menu-section data-category="{{ category.list.0.category }}">
+                <div class="nh-menu-section-head">
+                    <h2>{{ category.grouper }}</h2>
+                    <span>{{ category.list|length }} pilihan</span>
+                </div>
+                <div class="nh-menu-grid">
+                    {% for item, field in form.menu_rows %}
+                    {% if item.category == category.list.0.category %}
+                    <article class="nh-menu-card" data-menu-card data-category="{{ item.category }}" data-menu-name="{{ item.name|lower }}">
+                        <div class="nh-menu-image" aria-hidden="true">
+                            {% if item.image_url %}
+                            <img src="{{ item.image_url }}" alt="">
+                            {% else %}
+                            <svg viewBox="0 0 24 24"><path d="M4 17h16M6 17a6 6 0 0 1 12 0M12 7V5m-5.6 2.4L5 6m14 1.4L19 6"/></svg>
+                            {% endif %}
+                        </div>
+                        <span class="nh-menu-cat">{{ item.get_category_display }}</span>
+                        <h3>{{ item.name }}</h3>
+                        {% if item.description %}<p class="nh-menu-desc">{{ item.description }}</p>{% endif %}
+                        <div class="nh-menu-foot">
+                            <span class="nh-menu-price">Rp {{ item.price|rupiah }}</span>
+                            <span class="nh-qty">{{ field }}</span>
+                        </div>
+                        {% if field.errors %}
+                        <small class="nh-field-error" role="alert">{{ field.errors|striptags }}</small>
+                        {% endif %}
+                    </article>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <p class="nh-help-text" data-menu-empty hidden>Tidak ada menu yang cocok dengan pencarian Anda.</p>
+            {% else %}
+            <div class="nh-empty"><p>Menu sedang diperbarui. Silakan coba lagi nanti.</p></div>
+            {% endif %}
+        </section>
+
+        <aside class="nh-stack">
+            <section class="nh-card nh-order-panel" aria-labelledby="order-heading">
+                <div class="nh-card-heading">
+                    <div><p class="nh-kicker">02 · Konfirmasi</p><h2 id="order-heading">Detail pesanan</h2></div>
+                </div>
+
+                <label class="nh-field" for="{{ form.booking.id_for_label }}">
+                    <span>{{ form.booking.label }}</span>
+                    {{ form.booking }}
+                    {% if form.booking.errors %}<small class="nh-field-error" role="alert">{{ form.booking.errors|striptags }}</small>{% endif %}
+                </label>
+
+                <label class="nh-field" for="{{ form.special_instructions.id_for_label }}">
+                    <span>{{ form.special_instructions.label }} <em>opsional</em></span>
+                    {{ form.special_instructions }}
+                    {% if form.special_instructions.errors %}<small class="nh-field-error" role="alert">{{ form.special_instructions.errors|striptags }}</small>{% endif %}
+                </label>
+
+                <div class="nh-cart-summary" aria-live="polite">
+                    <small>Perkiraan total</small>
+                    <strong id="cart-total">Rp 0</strong>
+                    <span class="nh-help-text" id="cart-count">Belum ada menu dipilih</span>
+                </div>
+
+                <div class="nh-secure-note">
+                    <span class="nh-secure-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                    </span>
+                    <div><strong>Harga dihitung di server</strong><span>Total final muncul pada riwayat pesanan setelah dikirim ke dapur.</span></div>
+                </div>
+
+                <button class="nh-button nh-button-primary nh-button-block" type="submit" style="margin-top:16px;">Kirim Pesanan →</button>
+            </section>
+
+            <section class="nh-note-card">
+                <strong>Jam operasional dapur</strong>
+                <p>Makanan tersedia pukul 06.00–23.00, minuman 24 jam. Pesanan di luar jam operasional diproses pada slot berikutnya.</p>
+            </section>
+        </aside>
+    </form>
+</div>
+{% else %}
+<section class="nh-card nh-empty nh-empty-large">
+    <span class="nh-empty-mark" aria-hidden="true">N</span>
+    <h2>Room service untuk tamu menginap</h2>
+    <p>Fitur ini aktif untuk reservasi yang sedang atau akan menginap. Buat reservasi terlebih dahulu, lalu pesan langsung dari kamar.</p>
+    <div class="nh-card-actions nh-card-actions-center">
+        <a class="nh-button nh-button-primary" href="{% url 'booking_create' %}">Buat Reservasi</a>
+        <a class="nh-button nh-button-ghost" href="{% url 'room_list' %}">Lihat Kamar</a>
+    </div>
+</section>
+{% endif %}
+
+{% if orders %}
+<section class="nh-card nh-order-history">
+    <div class="nh-card-heading">
+        <div><p class="nh-kicker">Riwayat</p><h2>Pesanan terbaru</h2></div>
+    </div>
+    <div class="nh-order-list">
+        {% for order in orders %}
+        <div class="nh-order-row">
+            <div>
+                <strong>#{{ order.pk|stringformat:'04d' }} · {{ order.get_service_type_display }}</strong>
+                <small>
+                    {{ order.created_at|date:'d M Y · H:i' }}
+                    {% if order.booking %} · Reservasi {{ order.booking.booking_code }}{% endif %}
+                </small>
+                {% if order.detail %}<small>{{ order.detail|truncatechars:90 }}</small>{% endif %}
+            </div>
+            <div class="nh-order-right">
+                <span class="nh-status nh-status-{% if order.status == 'DELIVERED' %}paid{% elif order.status == 'CANCELLED' %}cancelled{% else %}pending{% endif %}">
+                    <span aria-hidden="true"></span>{{ order.get_status_display }}
+                </span>
+                <strong>Rp {{ order.total|rupiah }}</strong>
+            </div>
+        </div>
+        {% if order.status_logs.all %}
+        <details class="nh-status-log">
+            <summary>Riwayat status</summary>
+            <ol>
+                {% for log in order.status_logs.all %}
+                <li>{{ log.get_status_display }}{% if log.note %} — {{ log.note }}{% endif %} <small>({{ log.created_at|date:'d M · H:i' }})</small></li>
+                {% endfor %}
+            </ol>
+        </details>
+        {% endif %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('room-service-form');
+    if (!form) { return; }
+
+    var rupiah = function (value) {
+        return 'Rp ' + Math.round(value).toLocaleString('id-ID');
+    };
+    var inputs = Array.prototype.slice.call(form.querySelectorAll('.qty-input'));
+    var totalEl = document.getElementById('cart-total');
+    var countEl = document.getElementById('cart-count');
+
+    function refresh() {
+        var total = 0;
+        var count = 0;
+        inputs.forEach(function (input) {
+            var qty = parseInt(input.value, 10) || 0;
+            if (qty > 0) {
+                total += (parseFloat(input.dataset.price) || 0) * qty;
+                count += qty;
+            }
+            var card = input.closest('[data-menu-card]');
+            if (card) { card.classList.toggle('is-selected', qty > 0); }
+        });
+        totalEl.textContent = rupiah(total);
+        countEl.textContent = count > 0
+            ? count + ' item menunggu dikirim'
+            : 'Belum ada menu dipilih';
+    }
+
+    form.addEventListener('input', function (event) {
+        if (event.target.classList.contains('qty-input')) { refresh(); }
+    });
+    refresh();
+
+    // Menu search + category chips (progressive enhancement).
+    var search = form.querySelector('[data-menu-search]');
+    var chips = Array.prototype.slice.call(form.querySelectorAll('[data-menu-filter]'));
+    var cards = Array.prototype.slice.call(form.querySelectorAll('[data-menu-card]'));
+    var sections = Array.prototype.slice.call(form.querySelectorAll('[data-menu-section]'));
+    var emptyNote = form.querySelector('[data-menu-empty]');
+    var activeFilter = 'all';
+
+    function applyFilters() {
+        var term = (search && search.value ? search.value : '').trim().toLowerCase();
+        var visibleTotal = 0;
+        sections.forEach(function (section) {
+            var visible = 0;
+            cards.filter(function (card) { return card.closest('[data-menu-section]') === section; }).forEach(function (card) {
+                var matchesFilter = activeFilter === 'all' || card.dataset.category === activeFilter;
+                var matchesTerm = !term || (card.dataset.menuName || '').indexOf(term) !== -1;
+                var show = matchesFilter && matchesTerm;
+                card.hidden = !show;
+                if (show) { visible += 1; }
+            });
+            section.hidden = visible === 0;
+            visibleTotal += visible;
+        });
+        if (emptyNote) { emptyNote.hidden = visibleTotal !== 0; }
+    }
+
+    if (search) { search.addEventListener('input', applyFilters); }
+    chips.forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            activeFilter = chip.dataset.menuFilter;
+            chips.forEach(function (other) { other.classList.toggle('is-active', other === chip); });
+            applyFilters();
+        });
+    });
+})();
+</script>
+{% endblock %}

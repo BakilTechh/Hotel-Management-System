@@ -60,7 +60,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -122,9 +122,34 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Shared, project-level assets (public site design system, motion scripts).
+STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Existing migrations were generated with BigAutoField; keep model state and
+# migrations aligned even when the environment's Django default differs.
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
+
+
+# ---------------------------------------------------------------------------
+# Payments
+# ---------------------------------------------------------------------------
+# HMAC-SHA256 secret used by the signed payment webhook.  Leave empty to
+# disable the endpoint entirely.  Set it via the environment in production.
+PAYMENT_WEBHOOK_SECRET = os.environ.get('PAYMENT_WEBHOOK_SECRET', '')
+PAYMENT_PROOF_MAX_MB = int(os.environ.get('PAYMENT_PROOF_MAX_MB', '5'))
+PAYMENT_ALLOWED_PROOF_TYPES = (
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+)
+
+# Uploaded receipts are validated before being stored.  Keeping this modest
+# also prevents memory pressure from very large in-memory uploads.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 
 # Email
