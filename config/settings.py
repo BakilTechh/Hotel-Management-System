@@ -16,6 +16,14 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load local secrets from .env (never committed).  The import is optional so
+# the project still boots on a host that has not installed python-dotenv yet.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except ImportError:  # pragma: no cover - depends on the host environment
+    pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
@@ -165,8 +173,27 @@ MAILERS = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Gemini — isi via environment, JANGAN hardcode API key di sini
-# (GitHub push protection menolak push yang berisi secret).
-# PowerShell: $env:GEMINI_API_KEY="..."; $env:GEMINI_MODEL="gemini-3.8-flash"
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash')
+# ---------------------------------------------------------------------------
+# Gemini concierge
+# ---------------------------------------------------------------------------
+# Put the key in the project's .env file (GEMINI_API_KEY=...) or in the
+# deployment environment.  Never commit a real key: .env is gitignored and
+# GitHub push protection rejects secrets in source files.
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '').strip()
+GEMINI_MODEL = (
+    os.environ.get('GEMINI_MODEL', 'gemini-3.1-flash-lite').strip()
+    or 'gemini-3.1-flash-lite'
+)
+
+
+def _env_int(name, default, minimum):
+    """Read a positive integer from the environment without crashing boot."""
+    try:
+        value = int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, value)
+
+
+GEMINI_TIMEOUT_MS = _env_int('GEMINI_TIMEOUT_MS', 30000, 1000)
+GEMINI_MAX_OUTPUT_TOKENS = _env_int('GEMINI_MAX_OUTPUT_TOKENS', 700, 64)

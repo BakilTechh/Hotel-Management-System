@@ -155,7 +155,7 @@
             {% for order in recent_orders %}
             <div class="nh-order-row">
                 <div><strong>#{{ order.pk|stringformat:'04d' }}</strong><small>{{ order.created_at|date:'d M Y · H:i' }}</small></div>
-                <div class="nh-order-right"><span class="nh-status nh-status-{% if order.status == 'DELIVERED' %}paid{% elif order.status == 'CANCELLED' %}cancelled{% else %}pending{% endif %}">{{ order.get_status_display }}</span><strong>Rp {{ order.total|rupiah }}</strong></div>
+                <div class="nh-order-right"><span class="nh-status nh-status-{% if order.status == 'DELIVERED' or order.status == 'READY' %}paid{% elif order.status == 'CANCELLED' %}cancelled{% else %}pending{% endif %}">{{ order.get_status_display }}</span><strong>Rp {{ order.total|rupiah }}</strong></div>
             </div>
             {% empty %}
             <p class="nh-help-text">Belum ada pesanan room service.</p>
