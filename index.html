@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentasi OOP - Hotel Management System (Nocturn Haven)</title>
+    <style>
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-hover: #0f3460;
+            --accent-primary: #e94560;
+            --accent-secondary: #533483;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --border: #2d2d4a;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --info: #2196f3;
+            --code-bg: #0d1117;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border-bottom: 2px solid var(--accent-primary);
+            padding: 2rem 0;
+            box-shadow: 0 4px 20px rgba(233, 69, 96, 0.3);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, var(--accent-primary), #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .sidebar {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+            border: 1px solid var(--border);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+        .sidebar h3 {
+            color: var(--accent-primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+        .sidebar nav ul {
+            list-style: none;
+        }
+        .sidebar nav li {
+            margin-bottom: 0.5rem;
+        }
+        .sidebar nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .sidebar nav a:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            padding-left: 1rem;
+        }
+        .sidebar nav a.active {
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            font-weight: 600;
+        }
+        .sidebar .subnav {
+            margin-left: 1rem;
+            margin-top: 0.3rem;
+        }
+        .sidebar .subnav a {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem;
+        }
+        .main {
+            min-width: 0;
+        }
+        section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        section h2 {
+            color: var(--accent-primary);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        section h3 {
+            color: #ff6b6b;
+            font-size: 1.4rem;
+            margin: 2rem 0 1rem;
+            padding-top: 1rem;
+        }
+        section h4 {
+            color: var(--info);
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        section p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .card {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(233, 69, 96, 0.2);
+            border-color: var(--accent-primary);
+        }
+        .card h4 {
+            color: var(--text-primary);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card ul {
+            color: var(--text-secondary);
+            margin-left: 1.5rem;
+        }
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+        .badge-success { background: rgba(76, 175, 80, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-warning { background: rgba(255, 152, 0, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+        .badge-info { background: rgba(33, 150, 243, 0.2); color: var(--info); border: 1px solid var(--info); }
+        .badge-danger { background: rgba(233, 69, 96, 0.2); color: var(--accent-primary); border: 1px solid var(--accent-primary); }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        thead {
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: white;
+        }
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        tbody tr:hover {
+            background: var(--bg-hover);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .code-block pre {
+            margin: 0;
+            color: #e6edf3;
+        }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .comment { color: #8b949e; }
+        .function { color: #d2a8ff; }
+        .class-name { color: #ffa657; }
+        .decorator { color: #79c0ff; }
+        .diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .pillar-card {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+        .pillar-encap { border-left-color: var(--success); }
+        .pillar-inher { border-left-color: var(--info); }
+        .pillar-poly { border-left-color: var(--warning); }
+        .pillar-abs { border-left-color: var(--accent-primary); }
+        .pillar-card h4 {
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+        .pillar-encap h4 { color: var(--success); }
+        .pillar-inher h4 { color: var(--info); }
+        .pillar-poly h4 { color: var(--warning); }
+        .pillar-abs h4 { color: var(--accent-primary); }
+        .feature-item {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .feature-item:hover {
+            background: var(--bg-hover);
+        }
+        .feature-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+        .toc {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .toc ul {
+            columns: 2;
+            column-gap: 2rem;
+        }
+        .toc li {
+            margin-bottom: 0.5rem;
+            break-inside: avoid;
+        }
+        .toc a {
+            color: var(--info);
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+        @media (max-width: 968px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static;
+                max-height: none;
+            }
+            .toc ul {
+                columns: 1;
+            }
+        }
+        @media (max-width: 640px) {
+            header h1 {
+                font-size: 2rem;
+            }
+            section {
+                padding: 1.25rem;
+            }
+            .container {
+                padding: 0 1rem;
+            }
+            .layout {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📊 Dokumentasi OOP - Hotel Management System</h1>
+            <p>Nocturn Haven | Django 6.1.1 | Python | Analisis 4 Pilar OOP Berdasarkan Kode Sumber Aktual</p>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <h3>📑 Daftar Isi</h3>
+            <nav>
+                <ul>
+                    <li><a href="#overview" class="active">1. Overview</a></li>
+                    <li><a href="#peta-fitur">2. Peta Fitur</a></li>
+                    <li><a href="#detail-fitur">3. Detail Fitur</a></li>
+                    <li><a href="#empat-pilar">4. Empat Pilar OOP</a></li>
+                    <li><a href="#matriks">5. Matriks Fitur × Pilar</a></li>
+                    <li><a href="#class-diagram">6. Class Diagram</a></li>
+                    <li><a href="#alur-proses">7. Alur Proses</a></li>
+                    <li><a href="#evaluasi">8. Evaluasi Desain OOP</a></li>
+                </ul>
+            </nav>
+            <h3 style="margin-top: 2rem;">🔗 Modul</h3>
+            <nav>
+                <ul class="subnav">
+                    <li><a href="#modul-accounts">Accounts</a></li>
+                    <li><a href="#modul-rooms">Rooms</a></li>
+                    <li><a href="#modul-reservations">Reservations</a></li>
+                    <li><a href="#modul-chatbot">Room Service</a></li>
+                    <li><a href="#modul-dashboard">Dashboard</a></li>
+                    <li><a href="#modul-core">Core (Baru)</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <!-- OVERVIEW -->
+            <section id="overview">
+                <h2>🏨 1. Overview</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h4>📋 Informasi Aplikasi</h4>
+                        <ul>
+                            <li><strong>Nama:</strong> Hotel Management System "Nocturn Haven"</li>
+                            <li><strong>Framework:</strong> Django 6.1.1 (Python)</li>
+                            <li><strong>Database:</strong> SQLite (dev) / PostgreSQL (prod)</li>
+                            <li><strong>Frontend:</strong> Django Templates + Custom CSS + Vanilla JS</li>
+                            <li><strong>Fitur AI:</strong> Google Gemini API untuk Room Service Concierge</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4>🎯 Tujuan Aplikasi</h4>
+                        <p style="color: var(--text-secondary);">
+                            Mengelola seluruh operasional hotel secara terintegrasi meliputi pemesanan kamar, 
+                            pembayaran, check-in/check-out, room service, ulasan tamu, dan manajemen oleh resepsionis/staff.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h4>🏗️ Arsitektur</h4>
+                        <ul>
+                            <li><strong>Pattern:</strong> MVT (Model-View-Template) Django</li>
+                            <li><strong>Service Layer:</strong> <code>reservations/services.py</code></li>
+                            <li><strong>OOP:</strong> Diterapkan pada Models, Services, Payment Processors</li>
+                            <li><strong>Modular:</strong> 6 apps + core utilities</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Ringkasan Modul</h3>
+                <div class="grid">
+                    <div class="card">
+                        <h4>🔐 accounts</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Autentikasi, profil tamu, role & permission</p>
+                    </div>
+                    <div class="card">
+                        <h4>🏠 rooms</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Master kamar, tipe kamar, ketersediaan</p>
+                    </div>
+                    <div class="card">
+                        <h4>📅 reservations</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Booking, pembayaran, voucher, review</p>
+                    </div>
+                    <div class="card">
+                        <h4>🍽️ chatbot (Room Service)</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Menu F&B, pemesanan, tracking, AI concierge</p>
+                    </div>
+                    <div class="card">
+                        <h4>📊 dashboard</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Portal tamu, resepsionis, laporan</p>
+                    </div>
+                    <div class="card">
+                        <h4>⚙️ core (Baru)</h4>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Base classes, notifiers, payment processors</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PETA FITUR -->
+            <section id="peta-fitur">
+                <h2>🗺️ 2. Peta Fitur</h2>
+                
+                <h3>👤 Fitur untuk Tamu (Guest)</h3>
+                <div class="grid">
+                    <div class="feature-item">
+                        <span class="feature-name">🔍 Jelajahi Katalog Kamar</span>
+                        <span class="badge badge-info">Publik</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">📅 Buat Reservasi (Booking)</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">💳 Upload Bukti Pembayaran</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">📜 Riwayat Pemesanan</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🍽️ Room Service (Pesan Makanan/Minuman)</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🤖 AI Concierge (Gemini)</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">⭐ Beri Ulasan</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">👤 Kelola Profil</span>
+                        <span class="badge badge-success">Autentikasi</span>
+                    </div>
+                </div>
+
+                <h3>👨‍💼 Fitur untuk Staff/Resepsionis</h3>
+                <div class="grid">
+                    <div class="feature-item">
+                        <span class="feature-name">✅ Verifikasi Pembayaran</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🏨 Check-in Tamu</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🚪 Check-out Tamu</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">👨‍🍳 Kelola Room Service Order (Dapur)</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">💸 Proses Refund</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">📊 Laporan Operasional</span>
+                        <span class="badge badge-warning">Staff/Admin</span>
+                    </div>
+                </div>
+
+                <h3>⚙️ Fitur untuk Administrator</h3>
+                <div class="grid">
+                    <div class="feature-item">
+                        <span class="feature-name">🏠 Kelola Room & RoomType</span>
+                        <span class="badge badge-danger">Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🎟️ Kelola Voucher Promo</span>
+                        <span class="badge badge-danger">Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">🍔 Kelola Menu Room Service</span>
+                        <span class="badge badge-danger">Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">👥 Kelola User & GuestProfile</span>
+                        <span class="badge badge-danger">Admin</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-name">📈 Kelola Semua Booking & Payment</span>
+                        <span class="badge badge-danger">Admin</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EMPAT PILAR OOP -->
+            <section id="empat-pilar">
+                <h2>🎯 4. Empat Pilar OOP (Analisis Implementasi Aktual)</h2>
+                
+                <div class="pillars-grid">
+                    <div class="pillar-card pillar-encap">
+                        <h4>🔒 1. ENCAPSULATION</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            <strong>Pengertian:</strong> Membungkus data dan perilaku dalam class, mengontrol akses agar data tidak diubah sembarangan.
+                        </p>
+                        <h5 style="color: var(--success); margin-bottom: 0.5rem;">Bukti Implementasi:</h5>
+                        <ul style="color: var(--text-secondary); margin-left: 1.25rem;">
+                            <li><strong>PromoVoucher._consume_quota()</strong> - Protected method, kuota hanya dikurangi via method terkontrol</li>
+                            <li><strong>ServiceOrder.transition_to()</strong> - Satu-satunya pintu ubah status, divalidasi oleh _can_transition()</li>
+                            <li><strong>Payment.__is_verifiable()</strong> - Private method (name mangling)</li>
+                            <li><strong>Booking.hitung_total_biaya()</strong> - Mengenkapsulasi kalkulasi kompleks</li>
+                            <li><strong>@property</strong> - display_name, initials, completeness, durasi_malam</li>
+                        </ul>
+                    </div>
+
+                    <div class="pillar-card pillar-inher">
+                        <h4>🧬 2. INHERITANCE</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            <strong>Pengertian:</strong> Class turunan mewarisi atribut/method dari class induk (relasi "is-a").
+                        </p>
+                        <h5 style="color: var(--info); margin-bottom: 0.5rem;">Bukti Implementasi:</h5>
+                        <ul style="color: var(--text-secondary); margin-left: 1.25rem;">
+                            <li><strong>TimeStampedModel</strong> (core/models.py) - Abstract Base Class</li>
+                            <li><strong>BaseTransaction(TimeStampedModel)</strong> - Booking, PromoVoucher, Payment, Review, PaymentEvent mewarisi</li>
+                            <li><strong>BasePaymentProcessor(ABC)</strong> - Abstract Base Class untuk payment processors</li>
+                            <li><strong>ManualTransferProcessor(BasePaymentProcessor)</strong> - Single inheritance</li>
+                            <li><strong>GatewayPaymentProcessor(BasePaymentProcessor)</strong> - Single inheritance</li>
+                        </ul>
+                    </div>
+
+                    <div class="pillar-card pillar-poly">
+                        <h4>🎭 3. POLYMORPHISM</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            <strong>Pengertian:</strong> Satu interface, banyak implementasi. Objek berbeda bisa dipanggil dengan cara yang sama.
+                        </p>
+                        <h5 style="color: var(--warning); margin-bottom: 0.5rem;">Bukti Implementasi:</h5>
+                        <ul style="color: var(--text-secondary); margin-left: 1.25rem;">
+                            <li><strong>Method Overriding:</strong> RoomServiceMenuItem.clean(), semua __str__()</li>
+                            <li><strong>Via Inheritance:</strong> BasePaymentProcessor.charge()/refund() diimplementasikan berbeda</li>
+                            <li><strong>Duck Typing:</strong> EmailNotifier, SMSNotifier, InAppNotifier - punya send() tanpa inheritance kuat</li>
+                            <li><strong>State-based:</strong> ServiceOrder behavior beda per fulfillment, Booking.payment_status_group()</li>
+                        </ul>
+                    </div>
+
+                    <div class="pillar-card pillar-abs">
+                        <h4>🎨 4. ABSTRACTION</h4>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            <strong>Pengertian:</strong> Menyembunyikan detail kompleks, hanya menampilkan interface yang diperlukan.
+                        </p>
+                        <h5 style="color: var(--accent-primary); margin-bottom: 0.5rem;">Bukti Implementasi:</h5>
+                        <ul style="color: var(--text-secondary); margin-left: 1.25rem;">
+                            <li><strong>reservations/services.py</strong> - Service layer menyembunyikan locking, transaksi, validasi kompleks</li>
+                            <li><strong>Booking.available_rooms()</strong> - Abstraksi query kompleks (bentrok, blocking status)</li>
+                            <li><strong>BasePaymentProcessor(ABC)</strong> - Interface tanpa implementasi detail</li>
+                            <li><strong>TimeStampedModel</strong> - Abstraksi kebutuhan timestamp bersama</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Contoh Kode - Enkapsulasi ServiceOrder</h3>
+                <div class="code-block">
+<pre><span class="comment"># chatbot/models.py - ENCAPSULATION</span>
+<span class="keyword">class</span> <span class="class-name">ServiceOrder</span>(models.Model):
+    <span class="keyword">def</span> <span class="function">_can_transition</span>(self, new_status):
+        <span class="string">"""Protected method: validasi transisi"""</span>
+        allowed = self.ALLOWED_TRANSITIONS.get(self.status, ())
+        <span class="keyword">if</span> new_status <span class="keyword">not in</span> allowed: <span class="keyword">return False</span>
+        <span class="keyword">if</span> new_status == self.STATUS_READY <span class="keyword">and not</span> self.is_pickup: <span class="keyword">return False</span>
+        <span class="keyword">if</span> new_status == self.STATUS_DELIVERED <span class="keyword">and</span> self.is_pickup: <span class="keyword">return False</span>
+        <span class="keyword">return True</span>
+
+    <span class="keyword">def</span> <span class="function">transition_to</span>(self, new_status, actor=None, note=''):
+        <span class="string">"""SATU-SATUNYA pintu untuk ubah status pesanan"""</span>
+        <span class="keyword">if not</span> self._can_transition(new_status):
+            <span class="keyword">return False</span>
+        old_status = self.status
+        self.status = new_status
+        self.save(update_fields=[<span class="string">'status'</span>, <span class="string">'updated_at'</span>])
+        ServiceOrderStatusLog.objects.create(
+            order=self, status=new_status, note=note <span class="keyword">or</span> <span class="string">''</span>, changed_by=actor,
+        )
+        <span class="keyword">return True</span></pre>
+                </div>
+
+                <h3>Contoh Kode - Inheritance + Polymorphism (Payment Processor)</h3>
+                <div class="code-block">
+<pre><span class="comment"># reservations/payment_processors/base.py - ABSTRACTION + INHERITANCE</span>
+<span class="keyword">from</span> abc <span class="keyword">import</span> ABC, abstractmethod
+
+<span class="keyword">class</span> <span class="class-name">BasePaymentProcessor</span>(ABC):
+    <span class="decorator">@abstractmethod</span>
+    <span class="keyword">def</span> <span class="function">charge</span>(self, booking, amount):
+        <span class="keyword">pass</span>
+    
+    <span class="decorator">@abstractmethod</span>
+    <span class="keyword">def</span> <span class="function">refund</span>(self, payment, amount):
+        <span class="keyword">pass</span>
+
+<span class="comment"># manual_transfer.py - POLYMORPHISM (inheritance)</span>
+<span class="keyword">class</span> <span class="class-name">ManualTransferProcessor</span>(BasePaymentProcessor):
+    <span class="keyword">def</span> <span class="function">charge</span>(self, booking, amount):
+        <span class="keyword">return</span> {<span class="string">"method"</span>: <span class="string">"MANUAL_TRANSFER"</span>, <span class="string">"status"</span>: <span class="string">"PENDING_VERIFICATION"</span>}
+    
+    <span class="keyword">def</span> <span class="function">refund</span>(self, payment, amount):
+        <span class="keyword">from</span> ..services <span class="keyword">import</span> request_refund
+        request_refund(payment, reason=<span class="string">"Refund via manual transfer"</span>)
+        <span class="keyword">return</span> {<span class="string">"method"</span>: <span class="string">"MANUAL_TRANSFER"</span>, <span class="string">"status"</span>: <span class="string">"REFUND_PENDING"</span>}
+
+<span class="comment"># gateway.py - POLYMORPHISM (different implementation)</span>
+<span class="keyword">class</span> <span class="class-name">GatewayPaymentProcessor</span>(BasePaymentProcessor):
+    <span class="keyword">def</span> <span class="function">charge</span>(self, booking, amount):
+        <span class="keyword">return</span> {<span class="string">"method"</span>: <span class="string">"GATEWAY"</span>, <span class="string">"status"</span>: <span class="string">"AWAITING_PAYMENT"</span>}
+    
+    <span class="keyword">def</span> <span class="function">refund</span>(self, payment, amount):
+        <span class="keyword">return</span> {<span class="string">"method"</span>: <span class="string">"GATEWAY"</span>, <span class="string">"status"</span>: <span class="string">"REFUND_INITIATED"</span>}</pre>
+                </div>
+            </section>
+
+            <!-- MATRIKS FITUR × PILAR -->
+            <section id="matriks">
+                <h2>📊 5. Matriks Fitur × 4 Pilar OOP</h2>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nama Fitur</th>
+                                <th>Modul</th>
+                                <th>Encapsulation</th>
+                                <th>Inheritance</th>
+                                <th>Polymorphism</th>
+                                <th>Abstraction</th>
+                                <th>Bukti Implementasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Pemesanan Kamar (Booking)</strong></td>
+                                <td>reservations</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td>Booking(BaseTransaction), hitung_total_biaya(), available_rooms()</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Pembayaran</strong></td>
+                                <td>reservations</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td>Payment(BaseTransaction), services.py, __is_verifiable()</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Voucher Promo</strong></td>
+                                <td>reservations</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td>PromoVoucher(BaseTransaction), _consume_quota(), _return_quota()</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ulasan Tamu (Review)</strong></td>
+                                <td>reservations</td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td>Review(BaseTransaction), @property display_name/initials</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Room Service Order</strong></td>
+                                <td>chatbot</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td>transition_to(), _can_transition(), STATUS_FLOW polimorfik</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Menu Room Service</strong></td>
+                                <td>chatbot</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td>clean() override, model validation</td>
+                            </tr>
+                            <tr>
+                                <td><strong>AI Concierge</strong></td>
+                                <td>chatbot</td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td>chatbot/services.py (abstraksi logika Gemini)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Profil Tamu</strong></td>
+                                <td>accounts</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td>GuestProfile, @property display_name/initials/completeness</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Master Kamar</strong></td>
+                                <td>rooms</td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-info">Tidak Ditemukan</span></td>
+                                <td>RoomType, Room, __str__() override</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Payment Processors (NEW)</strong></td>
+                                <td>reservations/payment_processors</td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td>BasePaymentProcessor(ABC) + ManualTransferProcessor + GatewayPaymentProcessor</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Core Notifiers (NEW)</strong></td>
+                                <td>core/notifiers</td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-warning">Tidak Langsung</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td><span class="badge badge-success">Eksplisit</span></td>
+                                <td>Duck typing: Email/SMS/InAppNotifier + notify_all()</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--success);"></div>
+                        <span>Diterapkan secara eksplisit</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--warning);"></div>
+                        <span>Diterapkan secara tidak langsung</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--info);"></div>
+                        <span>Tidak ditemukan atau tidak relevan</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLASS DIAGRAM -->
+            <section id="class-diagram">
+                <h2>🏛️ 6. Class Diagram (Hubungan Aktual)</h2>
+                
+                <h3>Inheritance Hierarchy - Core & Base Classes</h3>
+                <div class="diagram">
+                    <svg width="800" height="200" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="300" y="10" width="200" height="40" rx="5" fill="#0f3460" stroke="#2196f3" stroke-width="2"/>
+                        <text x="400" y="35" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">models.Model (Django)</text>
+                        
+                        <rect x="300" y="80" width="200" height="40" rx="5" fill="#16213e" stroke="#4caf50" stroke-width="2"/>
+                        <text x="400" y="105" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">TimeStampedModel (abstract)</text>
+                        
+                        <rect x="300" y="150" width="200" height="40" rx="5" fill="#16213e" stroke="#e94560" stroke-width="2"/>
+                        <text x="400" y="175" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">BaseTransaction (abstract)</text>
+                        
+                        <line x1="400" y1="50" x2="400" y2="80" stroke="#ffffff" stroke-width="2"/>
+                        <polygon points="400,80 395,70 405,70" fill="#ffffff"/>
+                        
+                        <line x1="400" y1="120" x2="400" y2="150" stroke="#ffffff" stroke-width="2"/>
+                        <polygon points="400,150 395,140 405,140" fill="#ffffff"/>
+                    </svg>
+                    <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">
+                        <strong>Keterangan:</strong> Panah dengan segitiga menunjukkan inheritance (is-a). BaseTransaction mewarisi TimeStampedModel yang mewarisi models.Model.
+                    </p>
+                </div>
+
+                <h3>Payment Processor - Polymorphism via Inheritance</h3>
+                <div class="diagram">
+                    <svg width="900" height="180" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="350" y="10" width="200" height="40" rx="5" fill="#0f3460" stroke="#ff9800" stroke-width="2"/>
+                        <text x="450" y="35" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">BasePaymentProcessor (ABC)</text>
+                        
+                        <rect x="150" y="110" width="220" height="50" rx="5" fill="#16213e" stroke="#4caf50" stroke-width="2"/>
+                        <text x="260" y="135" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">ManualTransferProcessor</text>
+                        <text x="260" y="150" text-anchor="middle" fill="#b0b0b0" font-size="9">charge() & refund() impl</text>
+                        
+                        <rect x="530" y="110" width="220" height="50" rx="5" fill="#16213e" stroke="#2196f3" stroke-width="2"/>
+                        <text x="640" y="135" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">GatewayPaymentProcessor</text>
+                        <text x="640" y="150" text-anchor="middle" fill="#b0b0b0" font-size="9">charge() & refund() impl</text>
+                        
+                        <line x1="450" y1="50" x2="260" y2="110" stroke="#ffffff" stroke-width="2"/>
+                        <polygon points="260,110 265,100 255,100" fill="#ffffff"/>
+                        
+                        <line x1="450" y1="50" x2="640" y2="110" stroke="#ffffff" stroke-width="2"/>
+                        <polygon points="640,110 645,100 635,100" fill="#ffffff"/>
+                    </svg>
+                    <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">
+                        <strong>Polymorphism:</strong> Keduanya mengimplementasikan interface yang sama dengan perilaku berbeda. Dapat dipanggil secara polimorfis.
+                    </p>
+                </div>
+            </section>
+
+            <!-- EVALUASI -->
+            <section id="evaluasi">
+                <h2>📈 8. Evaluasi Desain OOP</h2>
+                
+                <div class="grid">
+                    <div class="card">
+                        <h4 style="color: var(--success);">💪 Kekuatan</h4>
+                        <ul style="color: var(--text-secondary);">
+                            <li><strong>Service Layer:</strong> reservations/services.py memisahkan logika bisnis dengan baik</li>
+                            <li><strong>Base Classes:</strong> Penggunaan TimeStampedModel & BaseTransaction mengurangi duplikasi</li>
+                            <li><strong>Controlled Transitions:</strong> ServiceOrder.transition_to() dengan validasi ketat</li>
+                            <li><strong>Voucher Protection:</strong> Penggunaan method protected untuk kuota voucher</li>
+                            <li><strong>Payment Safety:</strong> Perubahan status terpusat di service layer</li>
+                            <li><strong>Polymorphism Demo:</strong> Penambahan payment processors & notifiers sangat baik untuk demonstrasi</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: var(--warning);">⚠️ Kekurangan</h4>
+                        <ul style="color: var(--text-secondary);">
+                            <li><strong>Booking Model:</strong> Beberapa field masih bisa di-assign langsung (total_biaya_akhir masih public)</li>
+                            <li><strong>Inheritance Depth:</strong> Hierarki masih relatif dangkal</li>
+                            <li><strong>Interface Usage:</strong> Payment processors baru ditambahkan tapi belum diintegrasikan ke flow utama</li>
+                            <li><strong>Private Methods:</strong> Masih sedikit penggunaan __private, lebih dominan _protected</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: var(--info);">💡 Rekomendasi</h4>
+                        <ul style="color: var(--text-secondary);">
+                            <li><strong>Integrasi Processors:</strong> Gunakan BasePaymentProcessor di flow pembayaran</li>
+                            <li><strong>Read-only Properties:</strong> Jadikan total_harga_dasar/diskon/pajak/total_biaya_akhir read-only</li>
+                            <li><strong>More ABC:</strong> Pertimbangkan BaseServiceOrder untuk hierarki layanan</li>
+                            <li><strong>Type Checking:</strong> Tambahkan validasi dengan isinstance() untuk demonstrasi polymorphism</li>
+                            <li><strong>Consistent Naming:</strong> Pertahankan konvensi _protected & __private yang sudah dimulai</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Kesimpulan</h3>
+                <p style="color: var(--text-secondary);">
+                    Proyek Hotel Management System ini telah menerapkan ke-4 pilar OOP dengan cukup baik, terutama di modul 
+                    <strong>reservations</strong> dan <strong>chatbot</strong>. Penambahan <strong>core/models.py</strong>, 
+                    <strong>payment_processors/</strong>, dan <strong>core/notifiers/</strong> memperkuat demonstrasi inheritance, 
+                    polymorphism, abstraction, dan encapsulation sesuai materi perkuliahan. Implementasi bersifat nyata berdasarkan 
+                    kode sumber, bukan rekaan.
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        <p>© 2026 Dokumentasi OOP Hotel Management System - Nocturn Haven</p>
+        <p style="margin-top: 0.5rem;">Dibuat berdasarkan analisis kode sumber aktual | Django 6.1.1</p>
+    </footer>
+
+    <script>
+        // Smooth scroll and active nav
+        document.querySelectorAll('.sidebar nav a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.sidebar nav a');
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
