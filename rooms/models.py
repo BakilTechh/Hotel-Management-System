@@ -1,6 +1,8 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.models import TimeStampedModel
+
 class RoomType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)

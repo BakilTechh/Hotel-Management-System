@@ -6,6 +6,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
+from core.models import TimeStampedModel
+
 
 class RoomServiceMenuItem(models.Model):
     """A dish or drink that guests can order through the room-service portal.
@@ -151,7 +153,12 @@ class RoomServiceMenuItem(models.Model):
 
 
 class ServiceOrder(models.Model):
-    """A food & beverage order placed by a guest from an eligible stay."""
+    """A food & beverage order placed by a guest from an eligible stay.
+    
+    Demonstrates:
+    - Encapsulation: status transitions controlled via transition_to() method
+    - Polymorphism: behavior differs based on fulfillment (DELIVERY/PICKUP)
+    """
 
     FULFILLMENT_DELIVERY = 'DELIVERY'
     FULFILLMENT_PICKUP = 'PICKUP'
@@ -360,27 +367,47 @@ class ServiceOrder(models.Model):
         )
         return min(prep + (8 if self.is_pickup else 12), 90)
 
-    def transition_to(self, new_status, actor=None, note=''):
-        """Move the order through the kitchen flow and write an audit log.
-
-        Returns ``True`` when the transition is valid.  Invalid transitions are
-        rejected instead of silently corrupting the guest's tracking view.
+    def _can_transition(self, new_status):
+        """Protected method: validasi kelayakan transisi status.
+        Hanya bisa dipanggil dari dalam class ini.
         """
         if new_status == self.status:
             return True
-        if new_status not in self.ALLOWED_TRANSITIONS.get(self.status, ()):
+        allowed = self.ALLOWED_TRANSITIONS.get(self.status, ())
+        if new_status not in allowed:
             return False
         if new_status == self.STATUS_READY and not self.is_pickup:
             return False
         if new_status == self.STATUS_DELIVERED and self.is_pickup:
             return False
+        return True
 
+    def transition_to(self, new_status, actor=None, note=''):
+        """Move the order through the kitchen flow and write an audit log.
+
+        ENCAPSULATION: Satu-satunya cara resmi untuk mengubah status pesanan.
+        Tidak boleh mengubah self.status secara langsung dari luar.
+        
+        POLYMORPHISM: Transisi bergantung pada fulfillment (DELIVERY/PICKUP).
+        
+        Returns ``True`` when the transition is valid.  Invalid transitions are
+        rejected instead of silently corrupting the guest's tracking view.
+        """
+        if not self._can_transition(new_status):
+            return False
+
+        old_status = self.status
         self.status = new_status
         self.save(update_fields=['status', 'updated_at'])
         ServiceOrderStatusLog.objects.create(
             order=self, status=new_status, note=note or '', changed_by=actor,
         )
         return True
+
+    @property
+    def is_editable_by_kitchen(self):
+        """Protected logic exposed as property: apakah masih bisa diubah dapur."""
+        return not self.is_final and self.status in self.ACTIVE_STATUSES
 
 
 class ServiceOrderItem(models.Model):
