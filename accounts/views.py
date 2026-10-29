@@ -229,9 +229,11 @@ class AccountLoginView(LoginView):
         if next_url:
             return next_url
         user = self.request.user
-        if user.is_staff or _role(user) == 'ADMIN':
-            return reverse_lazy('admin:index')
-        return reverse_lazy('home')
+        # Redirect staff and admins to custom admin dashboard
+        if user.is_staff or _role(user) in ('ADMIN', 'STAFF'):
+            return reverse_lazy('admin_dashboard')
+        # Regular guests go to guest dashboard
+        return reverse_lazy('guest_dashboard')
 
 
 class AccountLogoutView(LogoutView):

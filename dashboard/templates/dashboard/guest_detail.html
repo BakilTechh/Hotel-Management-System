@@ -1,0 +1,100 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Detail Tamu{% endblock %}
+{% block page_title %}Detail Tamu{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Informasi Tamu</h2>
+        </div>
+        <div class="nh-card-body">
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Nama Lengkap</small>
+                <strong>{{ guest.get_full_name|default:guest.username }}</strong>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Email</small>
+                <strong>{{ guest.email }}</strong>
+            </div>
+            
+            {% if profile %}
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Telepon</small>
+                <strong>{{ profile.phone_number|default:"-" }}</strong>
+            </div>
+            {% endif %}
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Bergabung</small>
+                <strong>{{ guest.date_joined|date:"d M Y" }}</strong>
+            </div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--nh-line);">
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Total Booking</small>
+                <div style="font-size: 24px; font-weight: 700; color: var(--nh-burgundy);">{{ total_bookings }}</div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Stay Selesai</small>
+                <div style="font-size: 24px; font-weight: 700; color: var(--nh-success);">{{ completed_stays }}</div>
+            </div>
+            
+            <div>
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Total Spent</small>
+                <div style="font-size: 24px; font-weight: 700; color: var(--nh-burgundy);">{{ total_spent|rupiah }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div>
+        <div class="nh-card">
+            <div class="nh-card-header">
+                <h2 class="nh-card-title">Riwayat Booking</h2>
+            </div>
+            <div class="nh-card-body" style="padding: 0;">
+                {% if bookings %}
+                <div class="nh-table-container" style="max-height: 600px; overflow-y: auto;">
+                    <table class="nh-table">
+                        <thead>
+                            <tr>
+                                <th>Kode Booking</th>
+                                <th>Kamar</th>
+                                <th>Check-In</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings %}
+                            <tr>
+                                <td><a href="{% url 'booking_detail' booking.pk %}" style="color: var(--nh-burgundy); text-decoration: none;"><strong>{{ booking.booking_code }}</strong></a></td>
+                                <td>{{ booking.room.number }} - {{ booking.room.room_type.name }}</td>
+                                <td>{{ booking.tanggal_check_in|date:"d M Y" }}</td>
+                                <td>
+                                    <span class="nh-badge {% if booking.status_pesanan == 'CONFIRMED' %}nh-badge-success{% elif booking.status_pesanan == 'CHECKED_IN' %}nh-badge-info{% elif booking.status_pesanan == 'CHECKED_OUT' %}nh-badge-muted{% else %}nh-badge-warning{% endif %}">
+                                        {{ booking.get_status_pesanan_display }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ booking.total_biaya_akhir|rupiah }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="nh-empty-state" style="padding: 40px; text-align: center;">
+                    <p style="color: var(--nh-ink-soft);">Belum ada riwayat booking.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

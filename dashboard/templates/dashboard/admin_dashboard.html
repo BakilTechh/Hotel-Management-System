@@ -1,0 +1,500 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Dashboard Admin{% endblock %}
+{% block eyebrow %}Admin Hotel{% endblock %}
+{% block page_title %}Dashboard Operasional{% endblock %}
+
+{% block content %}
+<div class="nh-admin-overview">
+    <!-- Quick Stats Grid -->
+    <div class="nh-stat-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 32px;">
+        <div class="nh-stat-card">
+            <div class="nh-stat-label">Kamar Tersedia</div>
+            <div class="nh-stat-value">{{ available_rooms }}</div>
+            <div class="nh-stat-meta">dari {{ total_rooms }} total kamar aktif</div>
+        </div>
+        
+        <div class="nh-stat-card">
+            <div class="nh-stat-label">Tingkat Hunian</div>
+            <div class="nh-stat-value">{{ occupancy_rate }}%</div>
+            <div class="nh-stat-meta">{{ occupied_rooms }} kamar terisi</div>
+        </div>
+        
+        <div class="nh-stat-card nh-stat-warning">
+            <div class="nh-stat-label">Perlu Verifikasi</div>
+            <div class="nh-stat-value">{{ pending_verification_count }}</div>
+            <div class="nh-stat-meta">pembayaran menunggu</div>
+        </div>
+        
+        <div class="nh-stat-card nh-stat-info">
+            <div class="nh-stat-label">Order Aktif</div>
+            <div class="nh-stat-value">{{ pending_service_count }}</div>
+            <div class="nh-stat-meta">room service orders</div>
+        </div>
+    </div>
+    
+    <!-- Today's Operations -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 32px;">
+        <div class="nh-card">
+            <div class="nh-card-header">
+                <h2 class="nh-card-title">Check-In Hari Ini</h2>
+                <span class="nh-badge nh-badge-primary">{{ arrivals_count }}</span>
+            </div>
+            <div class="nh-card-body">
+                {% if arrivals_today %}
+                <div class="nh-table-container" style="max-height: 300px; overflow-y: auto;">
+                    <table class="nh-table">
+                        <thead>
+                            <tr>
+                                <th>Kamar</th>
+                                <th>Tamu</th>
+                                <th>Tipe</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in arrivals_today %}
+                            <tr>
+                                <td><strong>{{ booking.room.number }}</strong></td>
+                                <td>{{ booking.user.get_full_name|default:booking.user.email }}</td>
+                                <td>{{ booking.room.room_type.name }}</td>
+                                <td>
+                                    <a href="{% url 'reception' %}?q={{ booking.booking_code }}" class="nh-button nh-button-sm nh-button-ghost">Check-In</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="nh-empty-state" style="padding: 32px; text-align: center;">
+                    <p style="color: var(--nh-ink-soft);">Tidak ada check-in terjadwal hari ini.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="nh-card">
+            <div class="nh-card-header">
+                <h2 class="nh-card-title">Check-Out Hari Ini</h2>
+                <span class="nh-badge nh-badge-secondary">{{ departures_count }}</span>
+            </div>
+            <div class="nh-card-body">
+                {% if departures_today %}
+                <div class="nh-table-container" style="max-height: 300px; overflow-y: auto;">
+                    <table class="nh-table">
+                        <thead>
+                            <tr>
+                                <th>Kamar</th>
+                                <th>Tamu</th>
+                                <th>Tipe</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in departures_today %}
+                            <tr>
+                                <td><strong>{{ booking.room.number }}</strong></td>
+                                <td>{{ booking.user.get_full_name|default:booking.user.email }}</td>
+                                <td>{{ booking.room.room_type.name }}</td>
+                                <td>
+                                    <a href="{% url 'reception' %}?q={{ booking.booking_code }}" class="nh-button nh-button-sm nh-button-ghost">Check-Out</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="nh-empty-state" style="padding: 32px; text-align: center;">
+                    <p style="color: var(--nh-ink-soft);">Tidak ada check-out terjadwal hari ini.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Queues -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 32px;">
+        <div class="nh-card">
+            <div class="nh-card-header">
+                <h2 class="nh-card-title">Pembayaran Perlu Verifikasi</h2>
+                <a href="{% url 'payment_verification' %}" class="nh-button nh-button-sm nh-button-ghost">Lihat Semua</a>
+            </div>
+            <div class="nh-card-body">
+                {% if pending_verification %}
+                <div class="nh-list">
+                    {% for payment in pending_verification %}
+                    <div class="nh-list-item">
+                        <div class="nh-list-item-main">
+                            <strong>{{ payment.booking.booking_code }}</strong>
+                            <small>{{ payment.booking.user.get_full_name|default:payment.booking.user.email }}</small>
+                        </div>
+                        <div class="nh-list-item-meta">
+                            <strong style="color: var(--nh-burgundy);">{{ payment.amount|rupiah }}</strong>
+                            <small>{{ payment.created_at|date:"d M Y" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="nh-empty-state" style="padding: 24px; text-align: center;">
+                    <p style="color: var(--nh-ink-soft);">Tidak ada pembayaran menunggu verifikasi.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="nh-card">
+            <div class="nh-card-header">
+                <h2 class="nh-card-title">Room Service Aktif</h2>
+                <a href="{% url 'service_order_queue_staff' %}" class="nh-button nh-button-sm nh-button-ghost">Lihat Semua</a>
+            </div>
+            <div class="nh-card-body">
+                {% if pending_service_orders %}
+                <div class="nh-list">
+                    {% for order in pending_service_orders %}
+                    <div class="nh-list-item">
+                        <div class="nh-list-item-main">
+                            <strong>{{ order.order_code }}</strong>
+                            <small>{% if order.booking %}Kamar {{ order.booking.room.number }}{% else %}{{ order.user.email }}{% endif %}</small>
+                        </div>
+                        <div class="nh-list-item-meta">
+                            <span class="nh-badge nh-badge-warning">{{ order.get_status_display }}</span>
+                            <small>{{ order.created_at|date:"H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="nh-empty-state" style="padding: 24px; text-align: center;">
+                    <p style="color: var(--nh-ink-soft);">Tidak ada order aktif saat ini.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Room Status Overview -->
+    <div class="nh-card" style="margin-bottom: 32px;">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Status Kamar</h2>
+            <a href="{% url 'housekeeping' %}" class="nh-button nh-button-sm nh-button-ghost">Housekeeping</a>
+        </div>
+        <div class="nh-card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px;">
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Clean & Ready</div>
+                    <div class="nh-info-value" style="color: var(--nh-success);">{{ clean_rooms }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Currently Occupied</div>
+                    <div class="nh-info-value" style="color: var(--nh-burgundy);">{{ occupied_rooms }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Needs Cleaning</div>
+                    <div class="nh-info-value" style="color: var(--nh-warning);">{{ dirty_rooms }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Maintenance</div>
+                    <div class="nh-info-value" style="color: var(--nh-danger);">{{ maintenance_rooms }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reservation Status Overview -->
+    <div class="nh-card" style="margin-bottom: 32px;">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Status Reservasi</h2>
+            <a href="{% url 'staff_reservations' %}" class="nh-button nh-button-sm nh-button-ghost">Lihat Semua</a>
+        </div>
+        <div class="nh-card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px;">
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Pending Payment</div>
+                    <div class="nh-info-value">{{ pending_payment_count }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Confirmed</div>
+                    <div class="nh-info-value">{{ confirmed_count }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Checked In</div>
+                    <div class="nh-info-value">{{ checked_in_count }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Upcoming (7 days)</div>
+                    <div class="nh-info-value">{{ upcoming_arrivals }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Financial Summary -->
+    <div class="nh-card" style="margin-bottom: 32px;">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Ringkasan Keuangan</h2>
+            <a href="{% url 'report' %}" class="nh-button nh-button-sm nh-button-ghost">Laporan Lengkap</a>
+        </div>
+        <div class="nh-card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px;">
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Total Revenue (Verified)</div>
+                    <div class="nh-info-value" style="color: var(--nh-success); font-size: 26px;">{{ total_revenue|rupiah }}</div>
+                </div>
+                <div class="nh-info-box">
+                    <div class="nh-info-label">Revenue (30 Days)</div>
+                    <div class="nh-info-value" style="color: var(--nh-burgundy); font-size: 26px;">{{ revenue_30_days|rupiah }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Aktivitas Reservasi Terbaru</h2>
+        </div>
+        <div class="nh-card-body">
+            {% if recent_bookings %}
+            <div class="nh-table-container">
+                <table class="nh-table">
+                    <thead>
+                        <tr>
+                            <th>Kode Booking</th>
+                            <th>Tamu</th>
+                            <th>Kamar</th>
+                            <th>Check-In</th>
+                            <th>Status Pesanan</th>
+                            <th>Status Pembayaran</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in recent_bookings %}
+                        <tr>
+                            <td><a href="{% url 'booking_detail' booking.pk %}" style="color: var(--nh-burgundy); text-decoration: none;"><strong>{{ booking.booking_code }}</strong></a></td>
+                            <td>{{ booking.user.get_full_name|default:booking.user.email|truncatewords:2 }}</td>
+                            <td>{{ booking.room.number }} - {{ booking.room.room_type.name|truncatewords:2 }}</td>
+                            <td>{{ booking.tanggal_check_in|date:"d M Y" }}</td>
+                            <td><span class="nh-badge {% if booking.status_pesanan == 'CONFIRMED' %}nh-badge-success{% elif booking.status_pesanan == 'PENDING_PAYMENT' %}nh-badge-warning{% elif booking.status_pesanan == 'CHECKED_IN' %}nh-badge-info{% else %}nh-badge-muted{% endif %}">{{ booking.get_status_pesanan_display }}</span></td>
+                            <td>
+                                {% if booking.payment %}
+                                <span class="nh-badge {% if booking.payment.status_pembayaran == 'VERIFIED' %}nh-badge-success{% elif booking.payment.status_pembayaran == 'PENDING_VERIFICATION' %}nh-badge-warning{% else %}nh-badge-muted{% endif %}">{{ booking.payment.get_status_pembayaran_display }}</span>
+                                {% else %}
+                                <span class="nh-badge nh-badge-muted">Belum ada</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ booking.total_biaya_akhir|rupiah }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="nh-empty-state" style="padding: 32px; text-align: center;">
+                <p style="color: var(--nh-ink-soft);">Belum ada aktivitas reservasi.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.nh-stat-grid {
+    display: grid;
+}
+
+.nh-stat-card {
+    background: var(--nh-surface);
+    border: 1px solid var(--nh-line);
+    border-radius: var(--nh-radius);
+    padding: 20px;
+    box-shadow: var(--nh-shadow-soft);
+}
+
+.nh-stat-card.nh-stat-warning {
+    border-left: 4px solid var(--nh-warning);
+}
+
+.nh-stat-card.nh-stat-info {
+    border-left: 4px solid var(--nh-info);
+}
+
+.nh-stat-label {
+    font-size: 13px;
+    color: var(--nh-ink-soft);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.nh-stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--nh-burgundy);
+    margin-bottom: 4px;
+}
+
+.nh-stat-meta {
+    font-size: 13px;
+    color: var(--nh-ink-faint);
+}
+
+.nh-card {
+    background: var(--nh-surface);
+    border: 1px solid var(--nh-line);
+    border-radius: var(--nh-radius);
+    box-shadow: var(--nh-shadow-soft);
+}
+
+.nh-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--nh-line);
+}
+
+.nh-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nh-ink);
+    margin: 0;
+}
+
+.nh-card-body {
+    padding: 20px;
+}
+
+.nh-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nh-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--nh-line);
+    border-radius: var(--nh-radius-sm);
+    background: var(--nh-surface-warm);
+}
+
+.nh-list-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nh-list-item-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+.nh-info-box {
+    padding: 16px;
+    background: var(--nh-surface-warm);
+    border: 1px solid var(--nh-line);
+    border-radius: var(--nh-radius-sm);
+}
+
+.nh-info-label {
+    font-size: 13px;
+    color: var(--nh-ink-soft);
+    margin-bottom: 8px;
+}
+
+.nh-info-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--nh-ink);
+}
+
+.nh-table-container {
+    overflow-x: auto;
+}
+
+.nh-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.nh-table thead {
+    background: var(--nh-canvas);
+}
+
+.nh-table th {
+    padding: 12px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--nh-ink-soft);
+    border-bottom: 1px solid var(--nh-line);
+}
+
+.nh-table td {
+    padding: 12px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--nh-line);
+}
+
+.nh-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: var(--nh-radius-pill);
+    white-space: nowrap;
+}
+
+.nh-badge-primary {
+    background: var(--nh-info-bg);
+    color: var(--nh-info);
+}
+
+.nh-badge-secondary {
+    background: var(--nh-canvas-deep);
+    color: var(--nh-ink);
+}
+
+.nh-badge-success {
+    background: var(--nh-success-bg);
+    color: var(--nh-success);
+}
+
+.nh-badge-warning {
+    background: var(--nh-warning-bg);
+    color: var(--nh-warning);
+}
+
+.nh-badge-info {
+    background: var(--nh-info-bg);
+    color: var(--nh-info);
+}
+
+.nh-badge-muted {
+    background: var(--nh-canvas-deep);
+    color: var(--nh-ink-faint);
+}
+
+.nh-button-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+    .nh-stat-grid,
+    [style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+{% endblock %}

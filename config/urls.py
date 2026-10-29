@@ -19,6 +19,7 @@ URL configuration for config project.
 """
 from django.contrib import admin
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -31,13 +32,21 @@ def health_check(request):
     return JsonResponse({'status': 'ok'})
 
 
+def admin_redirect(request):
+    """Redirect old admin URL to new custom admin dashboard."""
+    return redirect('admin_dashboard', permanent=True)
+
+
 urlpatterns = [
     path('', DashboardView.as_view(), name='home'),
     path('facilities/', FacilitiesView.as_view(), name='facilities'),
     path('offers/', OffersView.as_view(), name='offers'),
     path('about/', AboutView.as_view(), name='about'),
     path('health/', health_check, name='health'),
-    path('admin/', admin.site.urls),
+    # Redirect /admin/ to custom admin dashboard
+    path('admin/', admin_redirect, name='admin_redirect'),
+    # Keep Django admin available at a different URL for emergencies (optional)
+    # path('django-admin/', admin.site.urls),  # Uncomment if you need Django admin
     path('accounts/', include('accounts.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('rooms/', room_list, name='room_list'),

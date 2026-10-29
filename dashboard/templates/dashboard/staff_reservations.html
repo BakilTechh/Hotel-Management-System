@@ -1,0 +1,162 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Manajemen Reservasi{% endblock %}
+{% block page_title %}Manajemen Reservasi{% endblock %}
+
+{% block content %}
+<div class="nh-filters" style="background: var(--nh-surface); padding: 20px; border-radius: var(--nh-radius); margin-bottom: 24px; border: 1px solid var(--nh-line);">
+    <form method="get" action="">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 12px; align-items: end;">
+            <div>
+                <label for="search" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Cari Reservasi</label>
+                <input type="text" id="search" name="q" value="{{ search_query }}" placeholder="Kode booking, nama tamu, nomor kamar..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+            </div>
+            
+            <div>
+                <label for="status" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Status Pesanan</label>
+                <select id="status" name="status" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+                    <option value="">Semua</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="payment_status" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Status Pembayaran</label>
+                <select id="payment_status" name="payment_status" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+                    <option value="">Semua</option>
+                    {% for value, label in payment_status_choices %}
+                    <option value="{{ value }}" {% if payment_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="date_from" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Check-In Dari</label>
+                <input type="date" id="date_from" name="date_from" value="{{ date_from }}" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+            </div>
+            
+            <div>
+                <label for="date_to" style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Check-Out Hingga</label>
+                <input type="date" id="date_to" name="date_to" value="{{ date_to }}" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="nh-button nh-button-primary" style="white-space: nowrap;">Filter</button>
+                <a href="{% url 'staff_reservations' %}" class="nh-button nh-button-ghost" style="white-space: nowrap;">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Daftar Reservasi ({{ page_obj.paginator.count }} total)</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        {% if bookings %}
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Kode Booking</th>
+                        <th>Tamu</th>
+                        <th>Kamar</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Status Pesanan</th>
+                        <th>Status Pembayaran</th>
+                        <th>Total</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                    <tr>
+                        <td><strong><a href="{% url 'booking_detail' booking.pk %}" style="color: var(--nh-burgundy); text-decoration: none;">{{ booking.booking_code }}</a></strong></td>
+                        <td>
+                            {{ booking.user.get_full_name|default:booking.user.email|truncatewords:3 }}<br>
+                            <small style="color: var(--nh-ink-faint);">{{ booking.user.email }}</small>
+                        </td>
+                        <td>{{ booking.room.number }} - {{ booking.room.room_type.name }}</td>
+                        <td>{{ booking.tanggal_check_in|date:"d M Y" }}</td>
+                        <td>{{ booking.tanggal_check_out|date:"d M Y" }}</td>
+                        <td>
+                            <span class="nh-badge {% if booking.status_pesanan == 'CONFIRMED' %}nh-badge-success{% elif booking.status_pesanan == 'PENDING_PAYMENT' %}nh-badge-warning{% elif booking.status_pesanan == 'CHECKED_IN' %}nh-badge-info{% elif booking.status_pesanan == 'CANCELLED' %}nh-badge-muted{% else %}nh-badge-primary{% endif %}">
+                                {{ booking.get_status_pesanan_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if booking.payment %}
+                            <span class="nh-badge {% if booking.payment.status_pembayaran == 'VERIFIED' %}nh-badge-success{% elif booking.payment.status_pembayaran == 'PENDING_VERIFICATION' %}nh-badge-warning{% elif booking.payment.status_pembayaran == 'REJECTED' %}nh-badge-danger{% else %}nh-badge-muted{% endif %}">
+                                {{ booking.payment.get_status_pembayaran_display }}
+                            </span>
+                            {% else %}
+                            <span class="nh-badge nh-badge-muted">Belum ada</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ booking.total_biaya_akhir|rupiah }}</strong></td>
+                        <td>
+                            <a href="{% url 'booking_detail' booking.pk %}" class="nh-button nh-button-sm nh-button-ghost">Detail</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div style="padding: 20px; border-top: 1px solid var(--nh-line); display: flex; justify-content: center; gap: 8px;">
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">Previous</a>
+            {% endif %}
+            
+            <span style="padding: 6px 14px; font-size: 13px; color: var(--nh-ink-soft);">
+                Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if payment_filter %}&payment_status={{ payment_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">Last</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="nh-empty-state" style="padding: 60px 20px; text-align: center;">
+            <p style="color: var(--nh-ink-soft); margin-bottom: 16px;">Tidak ada reservasi yang cocok dengan filter Anda.</p>
+            <a href="{% url 'staff_reservations' %}" class="nh-button nh-button-ghost">Reset Filter</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.nh-filters label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--nh-ink);
+}
+
+.nh-filters input,
+.nh-filters select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--nh-line);
+    border-radius: var(--nh-radius-sm);
+    font-size: 14px;
+    font-family: var(--nh-font-body);
+}
+
+.nh-filters input:focus,
+.nh-filters select:focus {
+    outline: 2px solid var(--nh-gold);
+    outline-offset: 2px;
+}
+</style>
+{% endblock %}

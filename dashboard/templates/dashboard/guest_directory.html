@@ -1,0 +1,66 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Direktori Tamu{% endblock %}
+{% block page_title %}Direktori Tamu{% endblock %}
+
+{% block content %}
+<div class="nh-card" style="margin-bottom: 24px;">
+    <div class="nh-card-body">
+        <form method="get" action="">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Cari tamu (nama, email, telepon)..." style="flex: 1; padding: 12px 16px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 15px;">
+                <button type="submit" class="nh-button nh-button-primary">Cari</button>
+                {% if search_query %}
+                <a href="{% url 'guest_directory' %}" class="nh-button nh-button-ghost">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Daftar Tamu ({{ guests.count }} dari {{ total_guests }} total)</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        {% if guests %}
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Email</th>
+                        <th>Telepon</th>
+                        <th>Total Booking</th>
+                        <th>Total Spent</th>
+                        <th>Bergabung</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for guest in guests %}
+                    <tr>
+                        <td><strong>{{ guest.get_full_name|default:guest.username }}</strong></td>
+                        <td>{{ guest.email }}</td>
+                        <td>{% if guest.guest_profile %}{{ guest.guest_profile.phone_number|default:"-" }}{% else %}-{% endif %}</td>
+                        <td>{{ guest.booking_count }}</td>
+                        <td><strong>{{ guest.total_spent|default:0|rupiah }}</strong></td>
+                        <td>{{ guest.date_joined|date:"d M Y" }}</td>
+                        <td>
+                            <a href="{% url 'guest_detail' guest.pk %}" class="nh-button nh-button-sm nh-button-ghost">Detail</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="nh-empty-state" style="padding: 60px 20px; text-align: center;">
+            <p style="color: var(--nh-ink-soft);">Tidak ada tamu yang cocok dengan pencarian.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

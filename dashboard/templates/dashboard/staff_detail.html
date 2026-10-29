@@ -1,0 +1,99 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Detail Staff{% endblock %}
+{% block page_title %}Detail Staff{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Informasi Staff</h2>
+        </div>
+        <div class="nh-card-body">
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Nama</small>
+                <strong>{{ staff_user.get_full_name|default:staff_user.username }}</strong>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Email</small>
+                <strong>{{ staff_user.email }}</strong>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Role</small>
+                {% if profile %}
+                <span class="nh-badge {% if profile.role == 'ADMIN' %}nh-badge-danger{% else %}nh-badge-info{% endif %}">{{ profile.get_role_display }}</span>
+                {% else %}
+                <span>-</span>
+                {% endif %}
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Status</small>
+                {% if staff_user.is_active %}
+                <span class="nh-badge nh-badge-success">Aktif</span>
+                {% else %}
+                <span class="nh-badge nh-badge-muted">Nonaktif</span>
+                {% endif %}
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Bergabung</small>
+                <strong>{{ staff_user.date_joined|date:"d M Y H:i" }}</strong>
+            </div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--nh-line);">
+            
+            <div>
+                <small style="display: block; color: var(--nh-ink-soft); margin-bottom: 4px;">Pembayaran Diverifikasi</small>
+                <div style="font-size: 24px; font-weight: 700; color: var(--nh-burgundy);">{{ payments_verified }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Verifikasi Terakhir</h2>
+        </div>
+        <div class="nh-card-body" style="padding: 0;">
+            {% if recent_verifications %}
+            <div class="nh-table-container">
+                <table class="nh-table">
+                    <thead>
+                        <tr>
+                            <th>Booking</th>
+                            <th>Tamu</th>
+                            <th>Jumlah</th>
+                            <th>Status</th>
+                            <th>Waktu Verifikasi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in recent_verifications %}
+                        <tr>
+                            <td><strong>{{ payment.booking.booking_code }}</strong></td>
+                            <td>{{ payment.booking.user.get_full_name|default:payment.booking.user.email|truncatewords:2 }}</td>
+                            <td><strong>{{ payment.amount|rupiah }}</strong></td>
+                            <td>
+                                <span class="nh-badge {% if payment.status_pembayaran == 'VERIFIED' %}nh-badge-success{% else %}nh-badge-warning{% endif %}">
+                                    {{ payment.get_status_pembayaran_display }}
+                                </span>
+                            </td>
+                            <td>{{ payment.verified_at|date:"d M Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="nh-empty-state" style="padding: 40px; text-align: center;">
+                <p style="color: var(--nh-ink-soft);">Belum ada aktivitas verifikasi.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

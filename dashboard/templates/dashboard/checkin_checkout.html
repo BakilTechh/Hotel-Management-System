@@ -1,0 +1,291 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Check-In / Check-Out{% endblock %}
+{% block page_title %}Meja Resepsionis{% endblock %}
+
+{% block content %}
+<!-- Search Bar -->
+<div class="nh-card" style="margin-bottom: 24px;">
+    <div class="nh-card-body">
+        <form method="get" action="">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Cari reservasi (kode booking, nama tamu, nomor kamar)..." style="flex: 1; padding: 12px 16px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 15px; font-family: var(--nh-font-body);">
+                <button type="submit" class="nh-button nh-button-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 6px;">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    Cari
+                </button>
+                {% if search_query %}
+                <a href="{% url 'reception' %}" class="nh-button nh-button-ghost">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if search_results %}
+<!-- Search Results -->
+<div class="nh-card" style="margin-bottom: 24px;">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Hasil Pencarian</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Kode Booking</th>
+                        <th>Tamu</th>
+                        <th>Kamar</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
+                        <th>Status</th>
+                        <th>Pembayaran</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in search_results %}
+                    <tr>
+                        <td><strong>{{ booking.booking_code }}</strong></td>
+                        <td>{{ booking.user.get_full_name|default:booking.user.email }}</td>
+                        <td>{{ booking.room.number }} - {{ booking.room.room_type.name }}</td>
+                        <td>{{ booking.tanggal_check_in|date:"d M Y" }}</td>
+                        <td>{{ booking.tanggal_check_out|date:"d M Y" }}</td>
+                        <td><span class="nh-badge {% if booking.status_pesanan == 'CONFIRMED' %}nh-badge-success{% elif booking.status_pesanan == 'CHECKED_IN' %}nh-badge-info{% else %}nh-badge-muted{% endif %}">{{ booking.get_status_pesanan_display }}</span></td>
+                        <td>
+                            {% if booking.payment %}
+                            <span class="nh-badge {% if booking.payment.status_pembayaran == 'VERIFIED' %}nh-badge-success{% else %}nh-badge-warning{% endif %}">{{ booking.payment.get_status_pembayaran_display }}</span>
+                            {% else %}
+                            <span class="nh-badge nh-badge-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if booking.status_pesanan == 'CONFIRMED' %}
+                            <form method="post" action="{% url 'checkin_action' %}" style="display: inline;" onsubmit="return confirm('Konfirmasi check-in untuk {{ booking.user.get_full_name|default:booking.user.email }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="booking_id" value="{{ booking.pk }}">
+                                <button type="submit" class="nh-button nh-button-sm nh-button-primary">Check-In</button>
+                            </form>
+                            {% elif booking.status_pesanan == 'CHECKED_IN' %}
+                            <form method="post" action="{% url 'checkout_action' %}" style="display: inline;" onsubmit="return confirm('Konfirmasi check-out untuk {{ booking.user.get_full_name|default:booking.user.email }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="booking_id" value="{{ booking.pk }}">
+                                <button type="submit" class="nh-button nh-button-sm nh-button-ghost">Check-Out</button>
+                            </form>
+                            {% else %}
+                            <span style="color: var(--nh-ink-faint); font-size: 13px;">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Today's Arrivals and Departures -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Check-In Hari Ini</h2>
+            <span class="nh-badge nh-badge-primary">{{ arrivals_today.count }}</span>
+        </div>
+        <div class="nh-card-body" style="padding: 0;">
+            {% if arrivals_today %}
+            <div class="nh-table-container" style="max-height: 400px; overflow-y: auto;">
+                <table class="nh-table">
+                    <thead>
+                        <tr>
+                            <th>Kamar</th>
+                            <th>Tamu</th>
+                            <th>Durasi</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in arrivals_today %}
+                        <tr>
+                            <td><strong>{{ booking.room.number }}</strong><br><small style="color: var(--nh-ink-faint);">{{ booking.room.room_type.name }}</small></td>
+                            <td>
+                                {{ booking.user.get_full_name|default:booking.user.email }}<br>
+                                <small style="color: var(--nh-ink-faint);">{{ booking.user.email }}</small>
+                            </td>
+                            <td>{{ booking.durasi_malam }} malam</td>
+                            <td>
+                                <form method="post" action="{% url 'checkin_action' %}" onsubmit="return confirm('Konfirmasi check-in?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="booking_id" value="{{ booking.pk }}">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-primary">Check-In</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="nh-empty-state" style="padding: 40px; text-align: center;">
+                <p style="color: var(--nh-ink-soft); margin: 0;">Tidak ada check-in terjadwal hari ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="nh-card">
+        <div class="nh-card-header">
+            <h2 class="nh-card-title">Check-Out Hari Ini</h2>
+            <span class="nh-badge nh-badge-secondary">{{ departures_today.count }}</span>
+        </div>
+        <div class="nh-card-body" style="padding: 0;">
+            {% if departures_today %}
+            <div class="nh-table-container" style="max-height: 400px; overflow-y: auto;">
+                <table class="nh-table">
+                    <thead>
+                        <tr>
+                            <th>Kamar</th>
+                            <th>Tamu</th>
+                            <th>Check-In</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in departures_today %}
+                        <tr>
+                            <td><strong>{{ booking.room.number }}</strong><br><small style="color: var(--nh-ink-faint);">{{ booking.room.room_type.name }}</small></td>
+                            <td>
+                                {{ booking.user.get_full_name|default:booking.user.email }}<br>
+                                <small style="color: var(--nh-ink-faint);">{{ booking.user.email }}</small>
+                            </td>
+                            <td>{{ booking.tanggal_check_in|date:"d M Y" }}</td>
+                            <td>
+                                <form method="post" action="{% url 'checkout_action' %}" onsubmit="return confirm('Konfirmasi check-out? Kamar akan ditandai DIRTY.');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="booking_id" value="{{ booking.pk }}">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-ghost">Check-Out</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="nh-empty-state" style="padding: 40px; text-align: center;">
+                <p style="color: var(--nh-ink-soft); margin: 0;">Tidak ada check-out terjadwal hari ini.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Current Guests -->
+<div class="nh-card" style="margin-bottom: 24px;">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Tamu Sedang Menginap</h2>
+        <span class="nh-badge nh-badge-info">{{ current_guests.count }}</span>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        {% if current_guests %}
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Kamar</th>
+                        <th>Tamu</th>
+                        <th>Check-In</th>
+                        <th>Check-Out Terjadwal</th>
+                        <th>Durasi</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in current_guests %}
+                    <tr>
+                        <td><strong>{{ booking.room.number }}</strong><br><small style="color: var(--nh-ink-faint);">{{ booking.room.room_type.name }}</small></td>
+                        <td>
+                            {{ booking.user.get_full_name|default:booking.user.email }}<br>
+                            <small style="color: var(--nh-ink-faint);">{{ booking.user.email }}</small>
+                        </td>
+                        <td>{{ booking.checked_in_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            {{ booking.tanggal_check_out|date:"d M Y" }}
+                            {% if booking.tanggal_check_out <= today %}
+                            <span class="nh-badge nh-badge-warning" style="margin-left: 8px;">Hari ini</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ booking.durasi_malam }} malam</td>
+                        <td>
+                            <a href="{% url 'booking_detail' booking.pk %}" class="nh-button nh-button-sm nh-button-ghost">Detail</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="nh-empty-state" style="padding: 40px; text-align: center;">
+            <p style="color: var(--nh-ink-soft); margin: 0;">Tidak ada tamu yang sedang menginap.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Late Check-Outs -->
+{% if late_checkouts %}
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Check-Out Terlambat</h2>
+        <span class="nh-badge nh-badge-danger">{{ late_checkouts.count }}</span>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Kamar</th>
+                        <th>Tamu</th>
+                        <th>Seharusnya Check-Out</th>
+                        <th>Terlambat</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in late_checkouts %}
+                    <tr style="background: var(--nh-danger-bg);">
+                        <td><strong>{{ booking.room.number }}</strong></td>
+                        <td>{{ booking.user.get_full_name|default:booking.user.email }}</td>
+                        <td>{{ booking.tanggal_check_out|date:"d M Y" }}</td>
+                        <td>
+                            {% with days=(today|timeuntil:booking.tanggal_check_out).split.0 %}
+                            <strong style="color: var(--nh-danger);">{{ days }} hari</strong>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'checkout_action' %}" onsubmit="return confirm('Proses check-out terlambat untuk {{ booking.user.get_full_name|default:booking.user.email }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="booking_id" value="{{ booking.pk }}">
+                                <button type="submit" class="nh-button nh-button-sm" style="background: var(--nh-danger); border-color: var(--nh-danger); color: white;">Proses Check-Out</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.nh-badge-danger {
+    background: var(--nh-danger-bg);
+    color: var(--nh-danger);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Manajemen Kamar{% endblock %}
+{% block page_title %}Manajemen Kamar & Inventori{% endblock %}
+
+{% block content %}
+<div class="nh-card" style="margin-bottom: 24px;">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Tipe Kamar</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Nama Tipe</th>
+                        <th>Kapasitas</th>
+                        <th>Harga per Malam</th>
+                        <th>Jumlah Kamar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room_type in room_types %}
+                    <tr>
+                        <td><strong>{{ room_type.name }}</strong></td>
+                        <td>{{ room_type.capacity }} tamu</td>
+                        <td><strong>{{ room_type.price_per_night|rupiah }}</strong></td>
+                        <td>{{ room_type.room_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Daftar Kamar ({{ rooms.count }})</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Nomor Kamar</th>
+                        <th>Tipe</th>
+                        <th>Lantai</th>
+                        <th>Status</th>
+                        <th>Aktif</th>
+                        <th>Total Booking</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room in rooms %}
+                    <tr>
+                        <td><strong>{{ room.number }}</strong></td>
+                        <td>{{ room.room_type.name }}</td>
+                        <td>{{ room.floor }}</td>
+                        <td>
+                            <span class="nh-badge {% if room.status == 'CLEAN' %}nh-badge-success{% elif room.status == 'DIRTY' %}nh-badge-warning{% else %}nh-badge-danger{% endif %}">
+                                {{ room.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if room.is_active %}
+                            <span class="nh-badge nh-badge-success">Aktif</span>
+                            {% else %}
+                            <span class="nh-badge nh-badge-muted">Nonaktif</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ room.booking_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

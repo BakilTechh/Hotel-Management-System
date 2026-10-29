@@ -1,0 +1,150 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Room Service Orders{% endblock %}
+{% block page_title %}Manajemen Room Service{% endblock %}
+
+{% block content %}
+<div class="nh-stats-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 24px;">
+    <div class="nh-stat-card">
+        <div class="nh-stat-label">Pending Orders</div>
+        <div class="nh-stat-value">{{ pending_count }}</div>
+    </div>
+    <div class="nh-stat-card">
+        <div class="nh-stat-label">Selesai Hari Ini</div>
+        <div class="nh-stat-value">{{ completed_today }}</div>
+    </div>
+</div>
+
+<div class="nh-filters" style="background: var(--nh-surface); padding: 20px; border-radius: var(--nh-radius); margin-bottom: 24px; border: 1px solid var(--nh-line);">
+    <form method="get" action="">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end;">
+            <div>
+                <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Cari Order</label>
+                <input type="text" name="q" value="{{ search_query }}" placeholder="Kode order, nama tamu, nomor kamar..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Status</label>
+                <select name="status" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+                    <option value="">Semua</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Tipe Layanan</label>
+                <select name="service_type" style="width: 100%; padding: 10px 14px; border: 1px solid var(--nh-line); border-radius: var(--nh-radius-sm); font-size: 14px;">
+                    <option value="">Semua</option>
+                    {% for value, label in service_choices %}
+                    <option value="{{ value }}" {% if service_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="nh-button nh-button-primary">Filter</button>
+                <a href="{% url 'service_order_queue_staff' %}" class="nh-button nh-button-ghost">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Daftar Order ({{ page_obj.paginator.count }})</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        {% if orders %}
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Order Code</th>
+                        <th>Tamu</th>
+                        <th>Kamar</th>
+                        <th>Tipe Layanan</th>
+                        <th>Fulfillment</th>
+                        <th>Status</th>
+                        <th>Waktu Order</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><strong><a href="{% url 'service_order_detail' order.pk %}" style="color: var(--nh-burgundy); text-decoration: none;">{{ order.order_code }}</a></strong></td>
+                        <td>{{ order.user.get_full_name|default:order.user.email|truncatewords:2 }}</td>
+                        <td>{% if order.booking %}{{ order.booking.room.number }}{% else %}-{% endif %}</td>
+                        <td>{{ order.get_service_type_display }}</td>
+                        <td>{{ order.get_fulfillment_display }}</td>
+                        <td>
+                            <span class="nh-badge {% if order.status == 'INCOMING' %}nh-badge-warning{% elif order.status == 'PROCESSING' %}nh-badge-info{% elif order.status in 'DELIVERED,READY' %}nh-badge-success{% elif order.status == 'CANCELLED' %}nh-badge-muted{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ order.created_at|date:"d M Y H:i" }}</td>
+                        <td>
+                            {% if order.status in 'INCOMING,PROCESSING' %}
+                            <div style="display: flex; gap: 4px;">
+                                <form method="post" action="{% url 'service_order_update_status' %}" style="display: inline;" onsubmit="return confirm('Ubah status order?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="order_id" value="{{ order.pk }}">
+                                    {% if order.status == 'INCOMING' %}
+                                    <input type="hidden" name="status" value="PROCESSING">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-primary">Proses</button>
+                                    {% elif order.status == 'PROCESSING' %}
+                                    {% if order.fulfillment == 'DELIVERY' %}
+                                    <input type="hidden" name="status" value="DELIVERED">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-primary">Diantar</button>
+                                    {% else %}
+                                    <input type="hidden" name="status" value="READY">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-primary">Siap</button>
+                                    {% endif %}
+                                    {% endif %}
+                                </form>
+                                
+                                <form method="post" action="{% url 'service_order_update_status' %}" style="display: inline;" onsubmit="return confirm('Batalkan order ini?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="order_id" value="{{ order.pk }}">
+                                    <input type="hidden" name="status" value="CANCELLED">
+                                    <button type="submit" class="nh-button nh-button-sm nh-button-ghost">Batal</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <a href="{% url 'service_order_detail' order.pk %}" class="nh-button nh-button-sm nh-button-ghost">Detail</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div style="padding: 20px; border-top: 1px solid var(--nh-line); display: flex; justify-content: center; gap: 8px;">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">Previous</a>
+            {% endif %}
+            
+            <span style="padding: 6px 14px; font-size: 13px; color: var(--nh-ink-soft);">
+                Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="nh-button nh-button-sm nh-button-ghost">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="nh-empty-state" style="padding: 60px 20px; text-align: center;">
+            <p style="color: var(--nh-ink-soft); margin-bottom: 16px;">Tidak ada order yang cocok dengan filter.</p>
+            <a href="{% url 'service_order_queue_staff' %}" class="nh-button nh-button-ghost">Reset Filter</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

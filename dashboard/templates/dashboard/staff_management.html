@@ -1,0 +1,66 @@
+{% extends 'dashboard/admin_base.html' %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Manajemen Staff{% endblock %}
+{% block page_title %}Manajemen Staff & Akses{% endblock %}
+
+{% block content %}
+<div class="nh-card">
+    <div class="nh-card-header">
+        <h2 class="nh-card-title">Staff & Administrator ({{ total_staff }})</h2>
+    </div>
+    <div class="nh-card-body" style="padding: 0;">
+        <div class="nh-table-container">
+            <table class="nh-table">
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Bergabung</th>
+                        <th>Verifikasi Pembayaran</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_users %}
+                    <tr>
+                        <td><strong>{{ staff.get_full_name|default:staff.username }}</strong></td>
+                        <td>{{ staff.email }}</td>
+                        <td>
+                            {% if staff.guest_profile %}
+                            <span class="nh-badge {% if staff.guest_profile.role == 'ADMIN' %}nh-badge-danger{% elif staff.guest_profile.role == 'STAFF' %}nh-badge-info{% else %}nh-badge-muted{% endif %}">
+                                {{ staff.guest_profile.get_role_display }}
+                            </span>
+                            {% else %}
+                            <span class="nh-badge nh-badge-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if staff.is_active %}
+                            <span class="nh-badge nh-badge-success">Aktif</span>
+                            {% else %}
+                            <span class="nh-badge nh-badge-muted">Nonaktif</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ staff.date_joined|date:"d M Y" }}</td>
+                        <td>{{ staff.booking_handled_count }}</td>
+                        <td>
+                            <form method="post" action="{% url 'staff_toggle_active' %}" style="display: inline;" onsubmit="return confirm('{% if staff.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %} akun {{ staff.get_full_name|default:staff.email }}?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="staff_id" value="{{ staff.pk }}">
+                                <button type="submit" class="nh-button nh-button-sm nh-button-ghost">
+                                    {% if staff.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -256,3 +256,82 @@ class ServiceOrderStatusView(LoginRequiredMixin, View):
         })
         response['Cache-Control'] = 'no-store'
         return response
+
+
+
+class ServiceOrderQueueView(LoginRequiredMixin, View):
+    """Staff queue for managing room service orders."""
+    
+    def get(self, request):
+        # Check staff permission
+        if not request.user.is_staff:
+            return HttpResponseForbidden('Akses ditolak.')
+        
+        from django.db.models import Q, Count
+        from django.shortcuts import render
+        
+        # Get filter parameters
+        status_filter = request.GET.get('status', '')
+        fulfillment_filter = request.GET.get('fulfillment', '')
+        
+        # Base queryset
+        orders = ServiceOrder.objects.select_related(
+            'user', 'booking', 'booking__room'
+        ).prefetch_related('items').order_by('status', '-created_at')
+        
+        # Apply filters
+        if status_filter:
+            orders = orders.filter(status=status_filter)
+        
+        if fulfillment_filter:
+            orders = orders.filter(fulfillment=fulfillment_filter)
+        
+        # Group orders by status
+        incoming = orders.filter(status=ServiceOrder.STATUS_INCOMING)
+        processing = orders.filter(status=ServiceOrder.STATUS_PROCESSING)
+        completed = orders.filter(
+            status__in=(ServiceOrder.STATUS_DELIVERED, ServiceOrder.STATUS_READY)
+        )[:20]
+        
+        context = {
+            'orders': orders[:50],
+            'incoming_orders': incoming,
+            'processing_orders': processing,
+            'completed_orders': completed,
+            'status_filter': status_filter,
+            'fulfillment_filter': fulfillment_filter,
+            'active_section': 'room_service_queue',
+        }
+        
+        return render(request, 'chatbot/service_order_queue.html', context)
+    
+    def post(self, request):
+        # Handle status updates
+        if not request.user.is_staff:
+            return HttpResponseForbidden('Akses ditolak.')
+        
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        
+        order_id = request.POST.get('order_id')
+        new_status = request.POST.get('status')
+        
+        if not order_id or not new_status:
+            messages.error(request, 'Data tidak lengkap.')
+            return redirect('service_order_queue')
+        
+        try:
+            order = ServiceOrder.objects.get(pk=order_id)
+            if order.transition_to(new_status, actor=request.user):
+                messages.success(
+                    request, 
+                    f'Pesanan {order.order_code} berhasil diubah ke {order.get_status_display()}.'
+                )
+            else:
+                messages.error(request, 'Transisi status tidak valid.')
+        except ServiceOrder.DoesNotExist:
+            messages.error(request, 'Pesanan tidak ditemukan.')
+        except Exception as e:
+            messages.error(request, f'Gagal mengubah status: {str(e)}')
+        
+        return redirect('service_order_queue')
