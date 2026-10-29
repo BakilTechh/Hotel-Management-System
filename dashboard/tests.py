@@ -109,6 +109,20 @@ class GuestDashboardTest(TestCase):
         self.assertNotContains(response, f'NH-{other_booking.pk:04d}')
 
 
+class PublicInfoPagesTest(TestCase):
+    def test_facilities_page_is_public(self):
+        response = self.client.get('/facilities/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Kolam Renang Infinity Horizon')
+
+    def test_offers_page_is_public(self):
+        response = self.client.get('/offers/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Paket Menginap')
+
+
 class AdminBrandingTest(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser(
