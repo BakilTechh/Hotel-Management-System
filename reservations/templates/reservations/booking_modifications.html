@@ -1,0 +1,181 @@
+{% extends 'reservations/base.html' %}
+{% load static hotel_ui %}
+{% block title %}Riwayat Modifikasi{% endblock %}
+{% block reservation_body %}
+<section class="page-intro">
+    <div>
+        <p class="pub-eyebrow">Audit Trail</p>
+        <h1>Riwayat Modifikasi — {{ object.booking_code }}</h1>
+        <p>Semua perubahan yang pernah diajukan pada reservasi ini.</p>
+    </div>
+</section>
+
+<div class="reservation-layout">
+    <section class="form-card card">
+        <div class="form-heading">
+            <span class="form-icon">📋</span>
+            <div>
+                <h2>Informasi Reservasi</h2>
+                <p>{{ object.booking_code }} — {{ object.get_status_pesanan_display }}</p>
+            </div>
+        </div>
+        
+        <div class="summary-room">
+            <div>
+                <h3>{{ object.room }}</h3>
+                <p>
+                    <strong>Check-in:</strong> {{ object.tanggal_check_in|date:'d M Y' }} <br>
+                    <strong>Check-out:</strong> {{ object.tanggal_check_out|date:'d M Y' }} <br>
+                    <strong>Tamu:</strong> {{ object.jumlah_tamu }} orang <br>
+                    <strong>Total:</strong> Rp {{ object.total_biaya_akhir|rupiah }}
+                </p>
+            </div>
+            <div class="summary-actions">
+                {% if can_modify %}
+                <a href="{% url 'booking_modify' object.pk %}" class="btn btn--primary">
+                    Ajukan Perubahan
+                </a>
+                {% endif %}
+                <a href="{% url 'booking_detail' object.pk %}" class="btn btn--ghost">
+                    Kembali ke Detail
+                </a>
+            </div>
+        </div>
+
+        <div class="form-heading" style="margin-top: 32px;">
+            <span class="form-icon">📜</span>
+            <div>
+                <h2>Riwayat Modifikasi</h2>
+                <p>{{ modifications|length }} perubahan tercatat</p>
+            </div>
+        </div>
+
+        {% for mod in modifications %}
+        <div class="summary-room" style="border-left: 4px solid {% if mod.status == 'APPLIED' %}#10b981{% elif mod.status == 'APPROVED' %}#3b82f6{% elif mod.status == 'REJECTED' %}#ef4444{% else %}#f59e0b{% endif %};">
+            <div>
+                <span class="summary-label">
+                    {{ mod.get_modification_type_display }} — 
+                    <span class="status-pill" style="background: {% if mod.status == 'APPLIED' %}#d1fae5{% elif mod.status == 'APPROVED' %}#dbeafe{% elif mod.status == 'REJECTED' %}#fee2e2{% else %}#fef3c7{% endif %}; color: {% if mod.status == 'APPLIED' %}#065f46{% elif mod.status == 'APPROVED' %}#1e3a8a{% elif mod.status == 'REJECTED' %}#991b1b{% else %}#92400e{% endif %};">
+                        {{ mod.get_status_display }}
+                    </span>
+                </span>
+                
+                {% if mod.modification_type == 'DATE_CHANGE' %}
+                <h3>Perubahan Tanggal</h3>
+                <p>
+                    {% if mod.old_check_in != mod.new_check_in %}
+                    <strong>Check-in:</strong> {{ mod.old_check_in|date:'d M Y' }} → {{ mod.new_check_in|date:'d M Y' }}<br>
+                    {% endif %}
+                    {% if mod.old_check_out != mod.new_check_out %}
+                    <strong>Check-out:</strong> {{ mod.old_check_out|date:'d M Y' }} → {{ mod.new_check_out|date:'d M Y' }}<br>
+                    {% endif %}
+                </p>
+                
+                {% elif mod.modification_type == 'ROOM_CHANGE' %}
+                <h3>Pindah Kamar</h3>
+                <p>
+                    <strong>Dari:</strong> {{ mod.old_room }}<br>
+                    <strong>Ke:</strong> {{ mod.new_room }}
+                </p>
+                
+                {% elif mod.modification_type == 'GUEST_COUNT' %}
+                <h3>Perubahan Jumlah Tamu</h3>
+                <p>
+                    <strong>Dari:</strong> {{ mod.old_guest_count }} orang<br>
+                    <strong>Ke:</strong> {{ mod.new_guest_count }} orang
+                </p>
+                
+                {% elif mod.modification_type == 'CANCELLATION' %}
+                <h3>Pembatalan Reservasi</h3>
+                <p style="color: #dc2626;">
+                    Booking dibatalkan dengan kebijakan refund sesuai ketentuan.
+                </p>
+                
+                {% else %}
+                <h3>{{ mod.get_modification_type_display }}</h3>
+                {% endif %}
+                
+                <p style="margin-top: 12px; font-size: 14px; color: #64748b;">
+                    <strong>Diajukan:</strong> {{ mod.created_at|date:'d M Y H:i' }}
+                    {% if mod.requested_by %}oleh {{ mod.requested_by.username }}{% endif %}
+                    {% if mod.approved_at %}
+                    <br><strong>Diproses:</strong> {{ mod.approved_at|date:'d M Y H:i' }}
+                    {% if mod.approved_by %}oleh {{ mod.approved_by.username }}{% endif %}
+                    {% endif %}
+                </p>
+                
+                {% if mod.change_fee > 0 or mod.price_difference != 0 %}
+                <p style="margin-top: 12px; padding: 12px; background: #f1f5f9; border-radius: 4px;">
+                    {% if mod.change_fee > 0 %}
+                    <strong>Biaya Perubahan:</strong> Rp {{ mod.change_fee|rupiah }}<br>
+                    {% endif %}
+                    {% if mod.price_difference != 0 %}
+                    <strong>Selisih Harga:</strong> 
+                    {% if mod.price_difference > 0 %}
+                    +Rp {{ mod.price_difference|rupiah }} (tambahan)
+                    {% else %}
+                    -Rp {{ mod.price_difference|abs|rupiah }} (pengurangan)
+                    {% endif %}
+                    <br>
+                    {% endif %}
+                    <strong>Total Biaya Modifikasi:</strong> Rp {{ mod.total_cost|rupiah }}
+                </p>
+                {% endif %}
+                
+                {% if mod.notes %}
+                <p style="margin-top: 12px; font-style: italic; color: #475569;">
+                    "{{ mod.notes }}"
+                </p>
+                {% endif %}
+                
+                {% if mod.rejection_reason %}
+                <p style="margin-top: 12px; padding: 12px; background: #fee2e2; color: #991b1b; border-radius: 4px;">
+                    <strong>Alasan Penolakan:</strong> {{ mod.rejection_reason }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <p class="side-note">Belum ada modifikasi yang diajukan pada reservasi ini.</p>
+        {% endfor %}
+
+        {% if can_modify %}
+        <div style="margin-top: 24px; text-align: center;">
+            <a href="{% url 'booking_modify' object.pk %}" class="btn btn--primary">
+                Ajukan Perubahan Baru
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <aside class="side-card card">
+        <p class="pub-eyebrow">Kebijakan Pembatalan</p>
+        <h2>Refund yang Tersedia</h2>
+        {% if refund_percentage > 0 %}
+        <div style="padding: 16px; background: #d1fae5; border-radius: 8px; margin: 16px 0;">
+            <p style="font-size: 24px; font-weight: 700; color: #065f46; margin: 0;">
+                Rp {{ refund_amount|rupiah }}
+            </p>
+            <p style="color: #047857; margin: 4px 0 0 0;">
+                {{ refund_percentage }}% dari total pembayaran
+            </p>
+        </div>
+        {% else %}
+        <div style="padding: 16px; background: #fee2e2; border-radius: 8px; margin: 16px 0;">
+            <p style="color: #991b1b; font-weight: 600; margin: 0;">
+                Tidak ada refund tersedia
+            </p>
+        </div>
+        {% endif %}
+        
+        <p style="font-size: 14px; line-height: 1.6; margin-top: 12px;">
+            {{ cancellation_policy }}
+        </p>
+        
+        <div class="side-note" style="margin-top: 16px;">
+            <strong>Catatan</strong>
+            <span>Kebijakan refund dihitung berdasarkan jarak hari dari tanggal check-in.</span>
+        </div>
+    </aside>
+</div>
+{% endblock %}

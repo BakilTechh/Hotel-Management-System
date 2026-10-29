@@ -541,6 +541,134 @@ class PaymentEvent(BaseTransaction):
         return f'{self.provider}:{self.event_id}'
 
 
+class BookingModification(BaseTransaction):
+    """Track changes to bookings for audit trail and policy enforcement.
+    
+    Captures the before/after state of a booking modification and applies
+    business rules like change fees, date restrictions, and approval workflows.
+    """
+    
+    MODIFICATION_TYPES = [
+        ('DATE_CHANGE', 'Perubahan Tanggal'),
+        ('ROOM_CHANGE', 'Perubahan Kamar'),
+        ('GUEST_COUNT', 'Perubahan Jumlah Tamu'),
+        ('EARLY_CHECKIN', 'Early Check-in'),
+        ('LATE_CHECKOUT', 'Late Check-out'),
+        ('CANCELLATION', 'Pembatalan'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Disetujui'),
+        ('REJECTED', 'Ditolak'),
+        ('APPLIED', 'Diterapkan'),
+    ]
+    
+    booking = models.ForeignKey(
+        Booking, on_delete=models.CASCADE, related_name='modifications',
+    )
+    modification_type = models.CharField(max_length=30, choices=MODIFICATION_TYPES)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='PENDING')
+    
+    # Original values (before modification)
+    old_check_in = models.DateField(null=True, blank=True)
+    old_check_out = models.DateField(null=True, blank=True)
+    old_room = models.ForeignKey(
+        Room, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='booking_modifications_from',
+    )
+    old_guest_count = models.PositiveIntegerField(null=True, blank=True)
+    
+    # New values (after modification)
+    new_check_in = models.DateField(null=True, blank=True)
+    new_check_out = models.DateField(null=True, blank=True)
+    new_room = models.ForeignKey(
+        Room, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='booking_modifications_to',
+    )
+    new_guest_count = models.PositiveIntegerField(null=True, blank=True)
+    
+    # Financial impact
+    change_fee = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='Biaya perubahan yang dikenakan',
+    )
+    price_difference = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        help_text='Selisih harga akibat perubahan (+ tambahan, - pengurangan)',
+    )
+    
+    # Approval workflow
+    requested_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='requested_modifications',
+    )
+    approved_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='approved_modifications',
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'booking_modifications'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return (
+            f'{self.get_modification_type_display()} - '
+            f'{self.booking.booking_code} ({self.get_status_display()})'
+        )
+    
+    @property
+    def total_cost(self):
+        """Total additional cost = change fee + price difference (if positive)."""
+        return _money(self.change_fee + max(Decimal('0'), self.price_difference))
+    
+    @property
+    def can_approve(self):
+        """True if modification is still pending approval."""
+        return self.status == 'PENDING'
+    
+    def apply(self, actor=None):
+        """Apply the modification to the booking.
+        
+        This method should be called within a transaction after payment
+        verification if additional charges apply.
+        """
+        if self.status != 'APPROVED':
+            raise ValidationError('Hanya modifikasi yang sudah disetujui yang dapat diterapkan.')
+        
+        booking = Booking.objects.select_for_update().get(pk=self.booking_id)
+        
+        # Apply changes based on modification type
+        if self.modification_type == 'DATE_CHANGE':
+            if self.new_check_in:
+                booking.tanggal_check_in = self.new_check_in
+            if self.new_check_out:
+                booking.tanggal_check_out = self.new_check_out
+        elif self.modification_type == 'ROOM_CHANGE':
+            if self.new_room:
+                booking.room = self.new_room
+        elif self.modification_type == 'GUEST_COUNT':
+            if self.new_guest_count:
+                booking.jumlah_tamu = self.new_guest_count
+        
+        # Recalculate pricing if dates or room changed
+        if self.modification_type in ('DATE_CHANGE', 'ROOM_CHANGE'):
+            booking.hitung_total_biaya()
+        
+        booking.save()
+        
+        self.status = 'APPLIED'
+        self.approved_at = timezone.now()
+        self.approved_by = actor
+        self.save(update_fields=['status', 'approved_at', 'approved_by', 'updated_at'])
+        
+        return booking
+
+
 class Review(BaseTransaction):
     booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='review')
     guest = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')

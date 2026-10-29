@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
+from django.utils import timezone
 
-from .models import Booking, Payment, PaymentEvent, PromoVoucher, Review
+from .models import Booking, BookingModification, Payment, PaymentEvent, PromoVoucher, Review
 from .services import (
     InvalidTransition,
     complete_refund,
@@ -191,3 +192,75 @@ class ReviewAdmin(admin.ModelAdmin):
     list_filter = ('rating',)
     search_fields = ('guest__email', 'booking__id')
     list_select_related = ('booking', 'guest')
+
+
+@admin.register(BookingModification)
+class BookingModificationAdmin(admin.ModelAdmin):
+    """Admin interface for booking modifications and change requests."""
+    
+    list_display = (
+        'booking', 'modification_type', 'status', 'change_fee', 
+        'price_difference', 'requested_by', 'created_at',
+    )
+    list_filter = ('status', 'modification_type')
+    search_fields = ('booking__id', 'booking__user__username', 'notes')
+    list_select_related = ('booking', 'booking__user', 'requested_by', 'approved_by')
+    readonly_fields = (
+        'created_at', 'updated_at', 'approved_at', 'approved_by',
+    )
+    actions = ('approve_modifications', 'reject_modifications')
+    
+    fieldsets = (
+        ('Informasi Dasar', {
+            'fields': ('booking', 'modification_type', 'status', 'requested_by')
+        }),
+        ('Nilai Lama', {
+            'fields': ('old_check_in', 'old_check_out', 'old_room', 'old_guest_count'),
+            'classes': ('collapse',)
+        }),
+        ('Nilai Baru', {
+            'fields': ('new_check_in', 'new_check_out', 'new_room', 'new_guest_count')
+        }),
+        ('Biaya', {
+            'fields': ('change_fee', 'price_difference')
+        }),
+        ('Approval', {
+            'fields': ('approved_by', 'approved_at', 'rejection_reason', 'notes')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    @admin.action(description='Setujui modifikasi terpilih')
+    def approve_modifications(self, request, queryset):
+        approved = 0
+        for modification in queryset.filter(status='PENDING'):
+            modification.status = 'APPROVED'
+            modification.approved_by = request.user
+            modification.approved_at = timezone.now()
+            modification.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+            approved += 1
+        
+        if approved:
+            self.message_user(
+                request,
+                f'{approved} modifikasi disetujui. Tamu dapat menerapkan perubahan setelah pembayaran tambahan (jika ada).'
+            )
+    
+    @admin.action(description='Tolak modifikasi terpilih')
+    def reject_modifications(self, request, queryset):
+        rejected = 0
+        for modification in queryset.filter(status='PENDING'):
+            modification.status = 'REJECTED'
+            modification.approved_by = request.user
+            modification.approved_at = timezone.now()
+            modification.rejection_reason = 'Ditolak melalui admin panel.'
+            modification.save(update_fields=[
+                'status', 'approved_by', 'approved_at', 'rejection_reason', 'updated_at'
+            ])
+            rejected += 1
+        
+        if rejected:
+            self.message_user(request, f'{rejected} modifikasi ditolak.')

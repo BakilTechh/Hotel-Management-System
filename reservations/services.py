@@ -5,12 +5,13 @@ actions and the signed gateway webhook all follow the same rules.  Every
 function locks the related booking/payment rows before changing state.
 """
 
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Booking, Payment, PaymentEvent
+from .models import Booking, BookingModification, Payment, PaymentEvent
 
 
 class PaymentError(Exception):
@@ -19,6 +20,10 @@ class PaymentError(Exception):
 
 class InvalidTransition(PaymentError):
     """Raised when a payment/booking state change is not allowed."""
+
+
+class ModificationError(Exception):
+    """Raised when a booking modification cannot be processed."""
 
 
 def _money(value) -> Decimal:
@@ -289,3 +294,209 @@ def process_gateway_event(*, provider, event_id, event_type, payload):
         event.processing_error = ''
         event.save()
         return event, 'processed'
+
+
+
+# ------------------------------------------------------------------------------
+# Booking Modification Services
+# ------------------------------------------------------------------------------
+
+# Configuration constants for modification policies
+MODIFICATION_POLICIES = {
+    'date_change_fee': Decimal('150000'),  # Rp 150,000 flat fee for date changes
+    'room_change_fee': Decimal('100000'),  # Rp 100,000 flat fee for room changes
+    'early_checkin_fee_per_hour': Decimal('50000'),  # Rp 50,000 per hour
+    'late_checkout_fee_per_hour': Decimal('75000'),  # Rp 75,000 per hour
+    'min_notice_days': 3,  # Minimum days before check-in to allow free modifications
+    'cancellation_no_refund_days': 7,  # Days before check-in after which no refund
+    'cancellation_partial_refund_days': 14,  # Days before for 50% refund
+    'cancellation_full_refund_days': 30,  # Days before for full refund (minus fee)
+}
+
+
+def calculate_cancellation_refund(booking):
+    """Calculate refund amount based on cancellation timing.
+    
+    Returns (refund_amount, refund_percentage, policy_reason)
+    """
+    today = timezone.localdate()
+    days_until_checkin = (booking.tanggal_check_in - today).days
+    
+    if booking.status_pesanan == 'CHECKED_IN':
+        return Decimal('0'), 0, 'Tidak dapat membatalkan setelah check-in.'
+    
+    if booking.status_pesanan == 'CHECKED_OUT':
+        return Decimal('0'), 0, 'Tidak dapat membatalkan setelah check-out.'
+    
+    payment = booking.payment_record
+    if payment is None or payment.status_pembayaran != Payment.VERIFIED:
+        return Decimal('0'), 0, 'Tidak ada pembayaran yang perlu dikembalikan.'
+    
+    paid_amount = _money(payment.amount)
+    
+    # Full refund minus admin fee (30+ days)
+    if days_until_checkin >= MODIFICATION_POLICIES['cancellation_full_refund_days']:
+        admin_fee = _money(paid_amount * Decimal('0.05'))  # 5% admin fee
+        refund = _money(paid_amount - admin_fee)
+        return refund, 95, f'Pembatalan {days_until_checkin} hari sebelumnya: refund 95% (biaya admin 5%)'
+    
+    # 50% refund (14-29 days)
+    if days_until_checkin >= MODIFICATION_POLICIES['cancellation_partial_refund_days']:
+        refund = _money(paid_amount * Decimal('0.50'))
+        return refund, 50, f'Pembatalan {days_until_checkin} hari sebelumnya: refund 50%'
+    
+    # No refund (< 7 days or already past check-in)
+    if days_until_checkin < MODIFICATION_POLICIES['cancellation_no_refund_days']:
+        return Decimal('0'), 0, f'Pembatalan {days_until_checkin} hari sebelumnya: tidak ada refund'
+    
+    # 25% refund (7-13 days)
+    refund = _money(paid_amount * Decimal('0.25'))
+    return refund, 25, f'Pembatalan {days_until_checkin} hari sebelumnya: refund 25%'
+
+
+@transaction.atomic
+def request_booking_modification(
+    booking,
+    *,
+    modification_type,
+    new_check_in=None,
+    new_check_out=None,
+    new_room=None,
+    new_guest_count=None,
+    actor=None,
+    notes='',
+):
+    """Create a booking modification request with calculated fees.
+    
+    Returns the BookingModification instance. The modification must be
+    approved (manually or automatically based on policy) before applying.
+    """
+    if booking.status_pesanan not in ('PENDING_PAYMENT', 'CONFIRMED'):
+        raise ModificationError('Hanya booking yang belum check-in yang dapat dimodifikasi.')
+    
+    today = timezone.localdate()
+    days_until_checkin = (booking.tanggal_check_in - today).days
+    
+    # Determine if auto-approval applies (early enough notice)
+    auto_approve = days_until_checkin >= MODIFICATION_POLICIES['min_notice_days']
+    
+    # Calculate fees based on modification type
+    change_fee = Decimal('0')
+    price_difference = Decimal('0')
+    
+    if modification_type == 'DATE_CHANGE':
+        if not auto_approve:
+            change_fee = MODIFICATION_POLICIES['date_change_fee']
+        
+        # Calculate price difference if changing dates
+        if new_check_in or new_check_out:
+            old_nights = booking.durasi_malam
+            check_in = new_check_in or booking.tanggal_check_in
+            check_out = new_check_out or booking.tanggal_check_out
+            new_nights = max((check_out - check_in).days, 1)
+            
+            price_per_night = booking.room.room_type.price_per_night
+            old_total = _money(price_per_night * old_nights)
+            new_total = _money(price_per_night * new_nights)
+            price_difference = _money(new_total - old_total)
+    
+    elif modification_type == 'ROOM_CHANGE':
+        if not auto_approve:
+            change_fee = MODIFICATION_POLICIES['room_change_fee']
+        
+        if new_room:
+            old_price = booking.room.room_type.price_per_night
+            new_price = new_room.room_type.price_per_night
+            price_difference = _money(
+                (new_price - old_price) * booking.durasi_malam
+            )
+    
+    elif modification_type == 'EARLY_CHECKIN':
+        # Assume 4 hours early = half-day charge
+        change_fee = MODIFICATION_POLICIES['early_checkin_fee_per_hour'] * 4
+    
+    elif modification_type == 'LATE_CHECKOUT':
+        # Assume 4 hours late = half-day charge
+        change_fee = MODIFICATION_POLICIES['late_checkout_fee_per_hour'] * 4
+    
+    # Create the modification record
+    modification = BookingModification.objects.create(
+        booking=booking,
+        modification_type=modification_type,
+        status='APPROVED' if auto_approve else 'PENDING',
+        old_check_in=booking.tanggal_check_in,
+        old_check_out=booking.tanggal_check_out,
+        old_room=booking.room,
+        old_guest_count=booking.jumlah_tamu,
+        new_check_in=new_check_in,
+        new_check_out=new_check_out,
+        new_room=new_room,
+        new_guest_count=new_guest_count,
+        change_fee=change_fee,
+        price_difference=price_difference,
+        requested_by=actor,
+        notes=notes,
+    )
+    
+    if auto_approve:
+        modification.approved_at = timezone.now()
+        modification.approved_by = actor
+        modification.save(update_fields=['approved_at', 'approved_by', 'updated_at'])
+    
+    return modification
+
+
+@transaction.atomic
+def apply_booking_modification(modification, actor=None):
+    """Apply an approved modification to its booking.
+    
+    Should only be called after any additional payment has been verified.
+    """
+    if modification.status != 'APPROVED':
+        raise ModificationError('Hanya modifikasi yang sudah disetujui yang dapat diterapkan.')
+    
+    # Check if additional payment is required
+    if modification.total_cost > 0:
+        # In a real system, you would verify payment here
+        # For now, we assume payment has been handled separately
+        pass
+    
+    booking = Booking.objects.select_for_update().get(pk=modification.booking_id)
+    
+    # Apply the modification
+    modification.apply(actor=actor)
+    
+    return booking
+
+
+def cancel_booking_with_policy(booking, actor=None, reason=''):
+    """Cancel a booking following the refund policy based on timing.
+    
+    Returns (refund_amount, policy_reason)
+    """
+    refund_amount, refund_pct, policy_reason = calculate_cancellation_refund(booking)
+    
+    # Create a modification record for the cancellation
+    modification = BookingModification.objects.create(
+        booking=booking,
+        modification_type='CANCELLATION',
+        status='APPROVED',
+        old_check_in=booking.tanggal_check_in,
+        old_check_out=booking.tanggal_check_out,
+        old_room=booking.room,
+        change_fee=Decimal('0'),
+        price_difference=-refund_amount,  # Negative = refund
+        requested_by=actor,
+        approved_by=actor,
+        approved_at=timezone.now(),
+        notes=f'{policy_reason}\n{reason}' if reason else policy_reason,
+    )
+    
+    # Cancel the booking
+    booking.batalkan_pesanan()
+    
+    # Mark modification as applied
+    modification.status = 'APPLIED'
+    modification.save(update_fields=['status', 'updated_at'])
+    
+    return refund_amount, policy_reason

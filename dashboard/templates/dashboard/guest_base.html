@@ -61,6 +61,14 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V9l7-6 7 6v12M9 21v-6h6v6"/></svg>
                     <span>Meja Resepsionis</span>
                 </a>
+                <a href="{% url 'payment_verification' %}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="19" cy="6" r="2" fill="#10b981"/></svg>
+                    <span>Verifikasi Pembayaran</span>
+                </a>
+                <a href="{% url 'housekeeping' %}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L3 7v6c0 5 3.5 9.5 9 11 5.5-1.5 9-6 9-11V7l-9-5z"/><path d="M9 12l2 2 4-4"/></svg>
+                    <span>Housekeeping</span>
+                </a>
                 <a href="{% url 'admin:index' %}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     <span>Admin Hotel</span>

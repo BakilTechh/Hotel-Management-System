@@ -1,0 +1,207 @@
+{% extends 'reservations/base.html' %}
+{% load static hotel_ui %}
+{% block title %}Ubah Reservasi{% endblock %}
+{% block reservation_body %}
+<section class="page-intro">
+    <div>
+        <p class="pub-eyebrow">Modifikasi Booking</p>
+        <h1>Ubah Reservasi {{ booking.booking_code }}</h1>
+        <p>Ajukan perubahan tanggal, kamar, atau batalkan reservasi dengan kebijakan refund.</p>
+    </div>
+    <span class="step-label">Step 1 of 2</span>
+</section>
+
+<div class="reservation-layout">
+    <section class="form-card card">
+        <div class="form-heading">
+            <span class="form-icon">📝</span>
+            <div>
+                <h2>Informasi Reservasi Saat Ini</h2>
+                <p>Reservasi {{ booking.booking_code }}</p>
+            </div>
+        </div>
+        
+        <div class="summary-room">
+            <div>
+                <h3>{{ booking.room }}</h3>
+                <p>
+                    <strong>Check-in:</strong> {{ booking.tanggal_check_in|date:'d M Y' }} <br>
+                    <strong>Check-out:</strong> {{ booking.tanggal_check_out|date:'d M Y' }} <br>
+                    <strong>Tamu:</strong> {{ booking.jumlah_tamu }} orang <br>
+                    <strong>Status:</strong> {{ booking.get_status_pesanan_display }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Date Change Form -->
+        <div class="form-heading" style="margin-top:32px;">
+            <span class="form-icon">📅</span>
+            <div>
+                <h2>Ubah Tanggal</h2>
+                <p>Pindahkan check-in atau check-out ke tanggal lain</p>
+            </div>
+        </div>
+        <form method="post" class="reservation-form">
+            {% csrf_token %}
+            <input type="hidden" name="modification_type" value="DATE_CHANGE">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="new_check_in">Tanggal Check-in Baru (opsional)</label>
+                    <input 
+                        type="date" 
+                        id="new_check_in" 
+                        name="new_check_in" 
+                        min="{{ min_checkin|date:'Y-m-d' }}"
+                        value="{{ booking.tanggal_check_in|date:'Y-m-d' }}"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="new_check_out">Tanggal Check-out Baru (opsional)</label>
+                    <input 
+                        type="date" 
+                        id="new_check_out" 
+                        name="new_check_out" 
+                        min="{{ min_checkin|date:'Y-m-d' }}"
+                        value="{{ booking.tanggal_check_out|date:'Y-m-d' }}"
+                    >
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="notes">Catatan (opsional)</label>
+                <textarea id="notes" name="notes" rows="2" placeholder="Alasan perubahan..."></textarea>
+            </div>
+            <button type="submit" class="btn btn--primary">Ajukan Perubahan Tanggal</button>
+        </form>
+
+        <!-- Room Change Form -->
+        {% if available_rooms %}
+        <div class="form-heading" style="margin-top:32px;">
+            <span class="form-icon">🚪</span>
+            <div>
+                <h2>Pindah Kamar</h2>
+                <p>Pilih kamar lain yang tersedia pada periode yang sama</p>
+            </div>
+        </div>
+        <form method="post" class="reservation-form">
+            {% csrf_token %}
+            <input type="hidden" name="modification_type" value="ROOM_CHANGE">
+            <div class="form-group">
+                <label for="new_room">Pilih Kamar Baru</label>
+                <select id="new_room" name="new_room" required>
+                    <option value="">-- Pilih Kamar --</option>
+                    {% for room in available_rooms %}
+                    <option value="{{ room.id }}">
+                        {{ room }} - {{ room.room_type.name }} - Rp {{ room.room_type.price_per_night|rupiah }}/malam
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="notes_room">Catatan (opsional)</label>
+                <textarea id="notes_room" name="notes" rows="2" placeholder="Alasan pindah kamar..."></textarea>
+            </div>
+            <button type="submit" class="btn btn--primary">Ajukan Pindah Kamar</button>
+        </form>
+        {% endif %}
+
+        <!-- Guest Count Change -->
+        <div class="form-heading" style="margin-top:32px;">
+            <span class="form-icon">👥</span>
+            <div>
+                <h2>Ubah Jumlah Tamu</h2>
+                <p>Maksimal {{ booking.room.room_type.capacity }} tamu untuk kamar ini</p>
+            </div>
+        </div>
+        <form method="post" class="reservation-form">
+            {% csrf_token %}
+            <input type="hidden" name="modification_type" value="GUEST_COUNT">
+            <div class="form-group">
+                <label for="new_guest_count">Jumlah Tamu Baru</label>
+                <input 
+                    type="number" 
+                    id="new_guest_count" 
+                    name="new_guest_count" 
+                    min="1" 
+                    max="{{ booking.room.room_type.capacity }}"
+                    value="{{ booking.jumlah_tamu }}"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn btn--primary">Ajukan Perubahan Jumlah Tamu</button>
+        </form>
+
+        <!-- Early Check-in / Late Checkout -->
+        <div class="form-heading" style="margin-top:32px;">
+            <span class="form-icon">⏰</span>
+            <div>
+                <h2>Layanan Tambahan</h2>
+                <p>Early check-in atau late check-out (biaya tambahan berlaku)</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <form method="post" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="modification_type" value="EARLY_CHECKIN">
+                <button type="submit" class="btn btn--ghost" style="width: 100%;">
+                    Early Check-in (+Rp 200.000)
+                </button>
+            </form>
+            <form method="post" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="modification_type" value="LATE_CHECKOUT">
+                <button type="submit" class="btn btn--ghost" style="width: 100%;">
+                    Late Check-out (+Rp 300.000)
+                </button>
+            </form>
+        </div>
+
+        <!-- Cancellation -->
+        <div class="form-heading" style="margin-top:32px; border-top: 2px solid #ef4444; padding-top: 32px;">
+            <span class="form-icon">❌</span>
+            <div>
+                <h2>Batalkan Reservasi</h2>
+                <p style="color: #dc2626;">
+                    <strong>Kebijakan Refund:</strong> {{ cancellation_policy }}
+                </p>
+                {% if refund_percentage > 0 %}
+                <p style="color: #059669; font-weight: 600;">
+                    Refund yang akan diterima: Rp {{ refund_amount|rupiah }} ({{ refund_percentage }}%)
+                </p>
+                {% else %}
+                <p style="color: #dc2626; font-weight: 600;">
+                    Tidak ada refund untuk pembatalan ini.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        <form method="post" onsubmit="return confirm('Yakin ingin membatalkan reservasi ini? Tindakan ini tidak dapat dibatalkan.');">
+            {% csrf_token %}
+            <input type="hidden" name="modification_type" value="CANCEL_WITH_REFUND">
+            <div class="form-group">
+                <label for="cancel_notes">Alasan Pembatalan</label>
+                <textarea id="cancel_notes" name="notes" rows="3" placeholder="Mengapa Anda membatalkan reservasi ini?" required></textarea>
+            </div>
+            <button type="submit" class="btn btn--ghost" style="background: #dc2626; color: white; width: 100%;">
+                Batalkan Reservasi
+            </button>
+        </form>
+    </section>
+
+    <aside class="side-card card">
+        <p class="pub-eyebrow">Kebijakan Perubahan</p>
+        <h2>Ketentuan Modifikasi</h2>
+        <ul style="line-height: 1.8; margin: 16px 0;">
+            <li><strong>Gratis:</strong> Perubahan 3+ hari sebelum check-in</li>
+            <li><strong>Biaya admin:</strong> Rp 100.000 - 150.000 untuk perubahan mendadak</li>
+            <li><strong>Refund penuh (95%):</strong> Pembatalan 30+ hari sebelumnya</li>
+            <li><strong>Refund 50%:</strong> Pembatalan 14-29 hari sebelumnya</li>
+            <li><strong>Refund 25%:</strong> Pembatalan 7-13 hari sebelumnya</li>
+            <li><strong>No refund:</strong> Pembatalan kurang dari 7 hari</li>
+        </ul>
+        <div class="side-note">
+            <strong>Butuh bantuan?</strong>
+            <span>Hubungi tim reservasi untuk konsultasi perubahan booking.</span>
+        </div>
+    </aside>
+</div>
+{% endblock %}

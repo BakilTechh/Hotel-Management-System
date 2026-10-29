@@ -6,8 +6,12 @@ from .views import (
     BookingDetailView,
     BookingLatestView,
     BookingListView,
+    BookingModificationView,
+    BookingModifyRequestView,
     PaymentCreateView,
     PaymentProofView,
+    PaymentVerificationView,
+    PaymentVerifyActionView,
     ReceptionView,
     ReviewCreateView,
     payment_webhook,
@@ -18,6 +22,8 @@ urlpatterns = [
     path('riwayat/', BookingListView.as_view(), name='booking_list'),
     path('terakhir/', BookingLatestView.as_view(), name='booking_latest'),
     path('resepsionis/', ReceptionView.as_view(), name='reception'),
+    path('verifikasi-pembayaran/', PaymentVerificationView.as_view(), name='payment_verification'),
+    path('verifikasi-pembayaran/aksi/', PaymentVerifyActionView.as_view(), name='payment_verify_action'),
 
     # Payment endpoints must be declared before the generic <int:pk> route.
     path('payments/webhook/', payment_webhook, name='payment_webhook'),
@@ -25,6 +31,8 @@ urlpatterns = [
 
     path('<int:pk>/', BookingDetailView.as_view(), name='booking_detail'),
     path('<int:pk>/batal/', BookingCancelView.as_view(), name='booking_cancel'),
+    path('<int:pk>/ubah/', BookingModifyRequestView.as_view(), name='booking_modify'),
+    path('<int:pk>/modifikasi/', BookingModificationView.as_view(), name='booking_modifications'),
     path('<int:booking_id>/review/', ReviewCreateView.as_view(), name='review_create'),
     path('<int:booking_id>/bayar/', PaymentCreateView.as_view(), name='payment_create'),
 ]

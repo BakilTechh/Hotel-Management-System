@@ -36,9 +36,11 @@
             <aside class="rating-panel card card-pad" data-reveal aria-label="Ringkasan rating">
                 <div class="score">
                     <strong class="num">{% if rating_average %}{{ rating_average|floatformat:1 }}{% else %}—{% endif %}</strong>
-                    <span>dari 5<br>{% include 'public/_stars.html' with value=rating_round %}</span>
+                    <span>dari 5<br>{% include 'public/_stars.html' with value=rating_round large=True %}</span>
                 </div>
-                <p class="caption">{{ rating_count }} ulasan terverifikasi</p>
+                <p class="caption">
+                    {% if rating_count %}{{ rating_count }} ulasan terverifikasi{% else %}Belum ada ulasan — jadilah yang pertama{% endif %}
+                </p>
                 <div class="rating-dist">
                     {% for row in distribution %}
                     <a href="{% url 'review_list' %}?rating={{ row.stars }}#daftar-ulasan"{% if selected_rating == row.stars|stringformat:'d' %} class="is-active" aria-current="true"{% endif %}>

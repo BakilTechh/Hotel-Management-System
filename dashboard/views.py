@@ -1,6 +1,9 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
+from django.views import View
 from django.views.generic import TemplateView
 
 from accounts.models import GuestProfile
@@ -81,6 +84,16 @@ class OffersView(TemplateView):
 			.filter(kuota_penggunaan__gt=0, tanggal_kedaluwarsa__gte=now)
 			.order_by('tanggal_kedaluwarsa', 'kode_voucher')
 		)
+		return context
+
+
+class AboutView(TemplateView):
+	template_name = 'dashboard/about.html'
+
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		context['room_count'] = Room.objects.filter(is_active=True).count()
+		context['room_type_count'] = RoomType.objects.count()
 		return context
 
 
@@ -183,3 +196,109 @@ class ReportView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 			'maintenance_rooms': Room.objects.filter(status='MAINTENANCE').count(),
 		})
 		return context
+
+
+class HousekeepingView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
+	"""Housekeeping dashboard for managing room status.
+	
+	Shows all rooms grouped by status and allows staff to update room status
+	after cleaning or maintenance.
+	"""
+	
+	template_name = 'dashboard/housekeeping.html'
+	
+	def test_func(self):
+		"""Only staff and admin can access housekeeping."""
+		user = self.request.user
+		role = getattr(getattr(user, 'guest_profile', None), 'role', None)
+		return user.is_staff or role in ('STAFF', 'ADMIN')
+	
+	def get_context_data(self, **kwargs):
+		context = super().get_context_data(**kwargs)
+		today = timezone.localdate()
+		
+		# Get all rooms with related data
+		all_rooms = (
+			Room.objects
+			.select_related('room_type')
+			.prefetch_related('bookings')
+			.order_by('floor', 'number')
+		)
+		
+		# Group rooms by status
+		clean_rooms = all_rooms.filter(status='CLEAN')
+		dirty_rooms = all_rooms.filter(status='DIRTY')
+		maintenance_rooms = all_rooms.filter(status='MAINTENANCE')
+		
+		# Get rooms with upcoming check-ins today
+		checking_in_today = (
+			Booking.objects
+			.filter(
+				status_pesanan='CONFIRMED',
+				tanggal_check_in=today,
+			)
+			.select_related('room', 'room__room_type', 'user')
+			.order_by('room__number')
+		)
+		
+		# Get rooms with current check-outs today
+		checking_out_today = (
+			Booking.objects
+			.filter(
+				status_pesanan='CHECKED_IN',
+				tanggal_check_out=today,
+			)
+			.select_related('room', 'room__room_type', 'user')
+			.order_by('room__number')
+		)
+		
+		context.update({
+			'clean_rooms': clean_rooms,
+			'dirty_rooms': dirty_rooms,
+			'maintenance_rooms': maintenance_rooms,
+			'clean_count': clean_rooms.count(),
+			'dirty_count': dirty_rooms.count(),
+			'maintenance_count': maintenance_rooms.count(),
+			'checking_in_today': checking_in_today,
+			'checking_out_today': checking_out_today,
+			'total_rooms': all_rooms.count(),
+			'today': today,
+		})
+		return context
+
+
+class HousekeepingUpdateView(LoginRequiredMixin, UserPassesTestMixin, View):
+	"""Handle room status updates from housekeeping staff."""
+	
+	def test_func(self):
+		"""Only staff and admin can update room status."""
+		user = self.request.user
+		role = getattr(getattr(user, 'guest_profile', None), 'role', None)
+		return user.is_staff or role in ('STAFF', 'ADMIN')
+	
+	def post(self, request, *args, **kwargs):
+		room_id = request.POST.get('room_id')
+		new_status = request.POST.get('status')
+		
+		if not room_id or not new_status:
+			messages.error(request, 'Data tidak lengkap.')
+			return redirect('housekeeping')
+		
+		if new_status not in dict(Room.STATUS_CHOICES):
+			messages.error(request, 'Status tidak valid.')
+			return redirect('housekeeping')
+		
+		try:
+			room = get_object_or_404(Room, pk=room_id)
+			old_status = room.get_status_display()
+			room.status = new_status
+			room.save(update_fields=['status'])
+			
+			messages.success(
+				request,
+				f'Status kamar {room.number} berhasil diubah dari {old_status} ke {room.get_status_display()}.'
+			)
+		except Exception as e:
+			messages.error(request, f'Gagal mengubah status kamar: {str(e)}')
+		
+		return redirect('housekeeping')

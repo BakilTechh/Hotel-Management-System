@@ -19,7 +19,8 @@ Hotel Management System berbasis Django untuk **Nocturn Haven**.
 4. Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY`
 5. Run migration: `python manage.py migrate`
 6. Seed / refresh the curated menu: `python manage.py seed_room_service_menu`
-7. Run development server: `python manage.py runserver`
+7. Seed demo guest reviews: `python manage.py seed_demo_reviews`
+8. Run development server: `python manage.py runserver`
 
 ## Environment variables
 
@@ -99,6 +100,9 @@ secrets; `.env` is gitignored and `.env.example` documents the required keys.
   wall that links straight to the form.
 - Reviews show the guest's full name with the username as fallback, plus
   initials for the avatar.
+- `python manage.py seed_demo_reviews` adds six checked-out demo bookings with
+  reviews (safe to rerun; existing demo reviewers are skipped). Use
+  `--dry-run` to preview the count without writing.
 
 ## Front-end & design system
 
