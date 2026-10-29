@@ -1,34 +1,458 @@
 {% extends 'public/base.html' %}
-{% block title %}Laporan Operasional{% endblock %}
-{% block meta_description %}Ringkasan operasional hotel untuk staff dan admin.{% endblock %}
+{% load static %}
+{% load hotel_ui %}
+
+{% block title %}Laporan Analitik & Statistik{% endblock %}
+{% block meta_description %}Laporan komprehensif operasional hotel untuk staff dan admin dengan analitik mendalam.{% endblock %}
 
 {% block body_class %}report-page{% endblock %}
 
 {% block content %}
 <section class="page-hero">
     <div class="pub-shell">
-        <p class="pub-eyebrow">Ringkasan operasional</p>
-        <h1>Laporan Dasar</h1>
-        <p>Angka kunci pemesanan, pembayaran, dan kesiapan kamar — diperbarui langsung dari basis data hotel.</p>
+        <p class="pub-eyebrow">Analitik & Intelligence</p>
+        <h1>Laporan Operasional Lengkap</h1>
+        <p>Dashboard analitik komprehensif dengan metrik revenue, occupancy, conversion rate, dan performance insights — diperbarui real-time dari database hotel.</p>
         <div class="banner-actions" style="margin-top:26px">
-            <a class="btn btn--gold" href="{% url 'reception' %}">Meja Resepsionis</a>
-            <a class="btn btn--pale" href="{% url 'admin:index' %}">Kembali ke Admin <span class="btn__icon" aria-hidden="true">→</span></a>
+            <a class="btn btn--gold" href="{% url 'admin_dashboard' %}">Dashboard Admin</a>
+            <a class="btn btn--pale" href="{% url 'home' %}">Beranda <span class="btn__icon" aria-hidden="true">→</span></a>
         </div>
     </div>
 </section>
 
 <div class="page-body">
     <div class="pub-shell">
-        <div class="stat-grid" data-reveal-group>
-            <article class="stat-card card" data-reveal><small>Total Booking</small><strong class="num">{{ total_bookings }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Booking Confirmed</small><strong class="num">{{ confirmed_bookings }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Checked-In</small><strong class="num">{{ checked_in_bookings }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Checked-Out</small><strong class="num">{{ checked_out_bookings }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Pembayaran Terverifikasi</small><strong class="num">{{ verified_payments }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Kamar Clean</small><strong class="num">{{ clean_rooms }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Kamar Dirty</small><strong class="num">{{ dirty_rooms }}</strong></article>
-            <article class="stat-card card" data-reveal><small>Kamar Maintenance</small><strong class="num">{{ maintenance_rooms }}</strong></article>
-        </div>
+        
+        <!-- ===== REVENUE OVERVIEW ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">💰 Ringkasan Keuangan</h2>
+            <div class="stat-grid">
+                <article class="stat-card card stat-card--primary">
+                    <small>Total Revenue (All Time)</small>
+                    <strong class="num">{{ total_revenue|rupiah }}</strong>
+                    <div class="stat-meta">dari {{ verified_payments }} pembayaran terverifikasi</div>
+                </article>
+                <article class="stat-card card stat-card--success">
+                    <small>Revenue (30 Hari)</small>
+                    <strong class="num">{{ revenue_30_days|rupiah }}</strong>
+                    <div class="stat-meta">{{ revenue_30_days|floatformat:0|default:"0" }} IDR</div>
+                </article>
+                <article class="stat-card card stat-card--info">
+                    <small>Revenue (7 Hari)</small>
+                    <strong class="num">{{ revenue_7_days|rupiah }}</strong>
+                </article>
+                <article class="stat-card card">
+                    <small>Rata-rata Nilai Booking</small>
+                    <strong class="num">{{ avg_booking_value|rupiah }}</strong>
+                </article>
+                <article class="stat-card card stat-card--warning">
+                    <small>Pending Revenue</small>
+                    <strong class="num">{{ pending_revenue|rupiah }}</strong>
+                    <div class="stat-meta">menunggu pembayaran</div>
+                </article>
+                <article class="stat-card card stat-card--secondary">
+                    <small>Service Order Revenue (30d)</small>
+                    <strong class="num">{{ service_revenue_30_days|rupiah }}</strong>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== BOOKING STATISTICS ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">📊 Statistik Reservasi</h2>
+            <div class="stat-grid">
+                <article class="stat-card card">
+                    <small>Total Booking</small>
+                    <strong class="num">{{ total_bookings }}</strong>
+                </article>
+                <article class="stat-card card stat-card--success">
+                    <small>Confirmed</small>
+                    <strong class="num">{{ confirmed_bookings }}</strong>
+                </article>
+                <article class="stat-card card stat-card--info">
+                    <small>Checked-In</small>
+                    <strong class="num">{{ checked_in_bookings }}</strong>
+                </article>
+                <article class="stat-card card stat-card--muted">
+                    <small>Checked-Out</small>
+                    <strong class="num">{{ checked_out_bookings }}</strong>
+                </article>
+                <article class="stat-card card stat-card--warning">
+                    <small>Pending Payment</small>
+                    <strong class="num">{{ pending_payment_bookings }}</strong>
+                </article>
+                <article class="stat-card card stat-card--danger">
+                    <small>Cancelled</small>
+                    <strong class="num">{{ cancelled_bookings }}</strong>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== OCCUPANCY METRICS ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">🏨 Metrik Occupancy</h2>
+            <div class="stat-grid">
+                <article class="stat-card card stat-card--primary">
+                    <small>Tingkat Hunian Saat Ini</small>
+                    <strong class="num">{{ occupancy_rate }}%</strong>
+                    <div class="stat-meta">{{ occupied_rooms }} dari {{ total_rooms }} kamar terisi</div>
+                </article>
+                <article class="stat-card card">
+                    <small>Rata-rata Occupancy (30 Hari)</small>
+                    <strong class="num">{{ avg_occupancy_30_days }}%</strong>
+                </article>
+                <article class="stat-card card stat-card--success">
+                    <small>Kamar Clean & Ready</small>
+                    <strong class="num">{{ clean_rooms }}</strong>
+                </article>
+                <article class="stat-card card stat-card--warning">
+                    <small>Kamar Perlu Cleaning</small>
+                    <strong class="num">{{ dirty_rooms }}</strong>
+                </article>
+                <article class="stat-card card stat-card--danger">
+                    <small>Kamar Maintenance</small>
+                    <strong class="num">{{ maintenance_rooms }}</strong>
+                </article>
+                <article class="stat-card card">
+                    <small>Rata-rata Durasi Menginap</small>
+                    <strong class="num">{{ avg_stay_duration }}</strong>
+                    <div class="stat-meta">malam per booking</div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== CONVERSION METRICS ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">🎯 Metrik Konversi & Performance</h2>
+            <div class="stat-grid">
+                <article class="stat-card card stat-card--success">
+                    <small>Conversion Rate (30d)</small>
+                    <strong class="num">{{ conversion_rate }}%</strong>
+                    <div class="stat-meta">booking confirmed dari total created</div>
+                </article>
+                <article class="stat-card card stat-card--danger">
+                    <small>Cancellation Rate (30d)</small>
+                    <strong class="num">{{ cancellation_rate }}%</strong>
+                </article>
+                <article class="stat-card card">
+                    <small>Total Guests</small>
+                    <strong class="num">{{ total_guests }}</strong>
+                </article>
+                <article class="stat-card card stat-card--info">
+                    <small>New Guests (30d)</small>
+                    <strong class="num">{{ new_guests_30_days }}</strong>
+                </article>
+                <article class="stat-card card stat-card--primary">
+                    <small>Repeat Guests</small>
+                    <strong class="num">{{ repeat_guests }}</strong>
+                    <div class="stat-meta">{{ repeat_rate }}% repeat rate</div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== PAYMENT STATUS ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">💳 Status Pembayaran</h2>
+            <div class="stat-grid">
+                <article class="stat-card card stat-card--success">
+                    <small>Pembayaran Terverifikasi</small>
+                    <strong class="num">{{ verified_payments }}</strong>
+                </article>
+                <article class="stat-card card stat-card--warning">
+                    <small>Pending Verification</small>
+                    <strong class="num">{{ pending_verification_payments }}</strong>
+                </article>
+                <article class="stat-card card stat-card--danger">
+                    <small>Refund Pending</small>
+                    <strong class="num">{{ refund_pending }}</strong>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== VOUCHER USAGE ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">🎟️ Penggunaan Voucher</h2>
+            <div class="stat-grid">
+                <article class="stat-card card">
+                    <small>Voucher Digunakan (30d)</small>
+                    <strong class="num">{{ vouchers_used_30_days }}</strong>
+                </article>
+                <article class="stat-card card stat-card--warning">
+                    <small>Total Diskon Diberikan (30d)</small>
+                    <strong class="num">{{ total_discount_30_days|rupiah }}</strong>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== ROOM SERVICE ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">🍽️ Room Service Performance</h2>
+            <div class="stat-grid">
+                <article class="stat-card card">
+                    <small>Total Service Orders</small>
+                    <strong class="num">{{ total_service_orders }}</strong>
+                </article>
+                <article class="stat-card card stat-card--info">
+                    <small>Orders (30 Hari)</small>
+                    <strong class="num">{{ service_orders_30_days }}</strong>
+                </article>
+                <article class="stat-card card stat-card--success">
+                    <small>Service Revenue (30d)</small>
+                    <strong class="num">{{ service_revenue_30_days|rupiah }}</strong>
+                </article>
+            </div>
+        </section>
+
+        <!-- ===== ROOM TYPE PERFORMANCE ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">🏷️ Performance per Tipe Kamar (30 Hari)</h2>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipe Kamar</th>
+                            <th>Total Kamar</th>
+                            <th>Jumlah Booking</th>
+                            <th>Total Revenue</th>
+                            <th>Harga per Malam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room_type in room_type_performance %}
+                        <tr>
+                            <td><strong>{{ room_type.nama_tipe }}</strong></td>
+                            <td>{{ room_type.total_rooms }}</td>
+                            <td>{{ room_type.booking_count }}</td>
+                            <td><strong>{{ room_type.total_revenue|default:0|rupiah }}</strong></td>
+                            <td>{{ room_type.price_per_night|rupiah }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== BOOKING STATUS DISTRIBUTION ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">📈 Distribusi Status Booking</h2>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Jumlah</th>
+                            <th>Persentase</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for status in status_distribution %}
+                        <tr>
+                            <td><span class="badge badge--{{ status.status_pesanan|lower }}">{{ status.status_pesanan }}</span></td>
+                            <td><strong>{{ status.count }}</strong></td>
+                            <td>{{ status.count|floatformat:0|default:"0" }} / {{ total_bookings }} = {% widthratio status.count total_bookings 100 %}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===== OCCUPANCY HISTORY ===== -->
+        <section class="report-section" data-reveal>
+            <h2 class="section-title">📉 Riwayat Occupancy (30 Hari Terakhir)</h2>
+            <div class="chart-container">
+                <div class="simple-chart">
+                    {% for day in occupancy_history %}
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-bar" style="height: {{ day.rate }}%; {% if day.rate >= 80 %}background: var(--nh-success);{% elif day.rate >= 50 %}background: var(--nh-warning);{% else %}background: var(--nh-danger);{% endif %}"></div>
+                        <div class="chart-label">{{ day.date|date:"d/m" }}</div>
+                        <div class="chart-value">{{ day.rate }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
     </div>
 </div>
+
+<style>
+.report-section {
+    margin-bottom: 60px;
+}
+
+.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--nh-burgundy);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--nh-line);
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.stat-card {
+    padding: 20px;
+    background: var(--nh-surface);
+    border: 1px solid var(--nh-line);
+    border-radius: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-card small {
+    display: block;
+    font-size: 13px;
+    color: var(--nh-ink-soft);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-card .num {
+    display: block;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--nh-ink);
+    margin-bottom: 4px;
+}
+
+.stat-card .stat-meta {
+    font-size: 12px;
+    color: var(--nh-ink-faint);
+    margin-top: 8px;
+}
+
+.stat-card--primary { border-left: 4px solid var(--nh-burgundy); }
+.stat-card--success { border-left: 4px solid var(--nh-success); }
+.stat-card--info { border-left: 4px solid var(--nh-info); }
+.stat-card--warning { border-left: 4px solid var(--nh-warning); }
+.stat-card--danger { border-left: 4px solid var(--nh-danger); }
+.stat-card--secondary { border-left: 4px solid var(--nh-gold); }
+.stat-card--muted { border-left: 4px solid var(--nh-ink-faint); }
+
+.table-responsive {
+    overflow-x: auto;
+    margin-top: 18px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--nh-surface);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.data-table thead {
+    background: var(--nh-burgundy);
+    color: var(--nh-surface);
+}
+
+.data-table th {
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--nh-line);
+    font-size: 14px;
+}
+
+.data-table tbody tr:hover {
+    background: var(--nh-canvas);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.badge--pending_payment { background: var(--nh-warning-bg); color: var(--nh-warning); }
+.badge--confirmed { background: var(--nh-success-bg); color: var(--nh-success); }
+.badge--checked_in { background: var(--nh-info-bg); color: var(--nh-info); }
+.badge--checked_out { background: var(--nh-canvas-deep); color: var(--nh-ink); }
+.badge--cancelled { background: var(--nh-danger-bg); color: var(--nh-danger); }
+
+.chart-container {
+    background: var(--nh-surface);
+    border: 1px solid var(--nh-line);
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 18px;
+}
+
+.simple-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 200px;
+    gap: 4px;
+}
+
+.chart-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+}
+
+.chart-bar {
+    width: 100%;
+    min-height: 5px;
+    background: var(--nh-burgundy);
+    border-radius: 4px 4px 0 0;
+    transition: height 0.3s ease;
+}
+
+.chart-label {
+    font-size: 10px;
+    color: var(--nh-ink-faint);
+    margin-top: 4px;
+    writing-mode: horizontal-tb;
+}
+
+.chart-value {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--nh-ink-soft);
+    margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-label {
+        font-size: 8px;
+    }
+    
+    .chart-value {
+        display: none;
+    }
+}
+</style>
+
 {% endblock %}

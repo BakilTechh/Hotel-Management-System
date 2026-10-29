@@ -185,60 +185,89 @@ class ReportView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 
 	def get_context_data(self, **kwargs):
 		context = super().get_context_data(**kwargs)
-		from django.db.models import Count, Sum, Q
-		from django.db.models.functions import TruncDate
+		from django.db.models import Count, Sum, Q, Avg, F
+		from django.db.models.functions import TruncDate, TruncMonth
 		from datetime import timedelta
+		from decimal import Decimal
 		
 		today = timezone.localdate()
 		thirty_days_ago = today - timedelta(days=30)
+		seven_days_ago = today - timedelta(days=7)
+		ninety_days_ago = today - timedelta(days=90)
 		
-		# Basic counts
+		# ===== BASIC COUNTS =====
 		context.update({
 			'total_bookings': Booking.objects.count(),
 			'confirmed_bookings': Booking.objects.filter(status_pesanan='CONFIRMED').count(),
 			'checked_in_bookings': Booking.objects.filter(status_pesanan='CHECKED_IN').count(),
 			'checked_out_bookings': Booking.objects.filter(status_pesanan='CHECKED_OUT').count(),
+			'cancelled_bookings': Booking.objects.filter(status_pesanan='CANCELLED').count(),
+			'pending_payment_bookings': Booking.objects.filter(status_pesanan='PENDING_PAYMENT').count(),
 			'verified_payments': Payment.objects.filter(status_pembayaran='VERIFIED').count(),
+			'pending_verification_payments': Payment.objects.filter(status_pembayaran='PENDING_VERIFICATION').count(),
 			'refund_pending': Payment.objects.filter(status_pembayaran='REFUND_PENDING').count(),
 			'clean_rooms': Room.objects.filter(status='CLEAN').count(),
 			'dirty_rooms': Room.objects.filter(status='DIRTY').count(),
 			'maintenance_rooms': Room.objects.filter(status='MAINTENANCE').count(),
 		})
 		
-		# Revenue metrics
-		total_revenue = Payment.objects.filter(
-			status_pembayaran='VERIFIED'
-		).aggregate(total=Sum('amount'))['total'] or 0
+		# ===== REVENUE METRICS =====
+		verified_payments = Payment.objects.filter(status_pembayaran='VERIFIED')
 		
-		revenue_30_days = Payment.objects.filter(
-			status_pembayaran='VERIFIED',
+		total_revenue = verified_payments.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+		revenue_30_days = verified_payments.filter(
 			verified_at__gte=thirty_days_ago
-		).aggregate(total=Sum('amount'))['total'] or 0
+		).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+		revenue_7_days = verified_payments.filter(
+			verified_at__gte=seven_days_ago
+		).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+		
+		# Average booking value
+		avg_booking_value = verified_payments.aggregate(avg=Avg('amount'))['avg'] or Decimal('0.00')
+		
+		# Pending revenue (bookings waiting for payment)
+		pending_revenue = Booking.objects.filter(
+			status_pesanan='PENDING_PAYMENT'
+		).aggregate(total=Sum('total_biaya_akhir'))['total'] or Decimal('0.00')
 		
 		context.update({
 			'total_revenue': total_revenue,
 			'revenue_30_days': revenue_30_days,
+			'revenue_7_days': revenue_7_days,
+			'avg_booking_value': avg_booking_value,
+			'pending_revenue': pending_revenue,
 		})
 		
-		# Booking status distribution for chart
+		# ===== BOOKING STATUS DISTRIBUTION =====
 		status_distribution = Booking.objects.values('status_pesanan').annotate(
 			count=Count('id')
 		).order_by('status_pesanan')
-		
 		context['status_distribution'] = list(status_distribution)
 		
-		# Recent bookings trend (last 30 days)
+		# ===== BOOKING TRENDS (Last 30 days) =====
 		bookings_trend = Booking.objects.filter(
 			created_at__gte=thirty_days_ago
 		).annotate(
 			date=TruncDate('created_at')
 		).values('date').annotate(
-			count=Count('id')
+			count=Count('id'),
+			revenue=Sum('total_biaya_akhir')
 		).order_by('date')
-		
 		context['bookings_trend'] = list(bookings_trend)
 		
-		# Occupancy rate
+		# ===== MONTHLY REVENUE TREND (Last 6 months) =====
+		six_months_ago = today - timedelta(days=180)
+		monthly_revenue = verified_payments.filter(
+			verified_at__gte=six_months_ago
+		).annotate(
+			month=TruncMonth('verified_at')
+		).values('month').annotate(
+			revenue=Sum('amount'),
+			count=Count('id')
+		).order_by('month')
+		context['monthly_revenue'] = list(monthly_revenue)
+		
+		# ===== OCCUPANCY METRICS =====
 		total_rooms = Room.objects.filter(is_active=True).count()
 		occupied_rooms = Booking.objects.filter(
 			status_pesanan='CHECKED_IN',
@@ -246,11 +275,136 @@ class ReportView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
 			tanggal_check_out__gt=today
 		).count()
 		
+		occupancy_rate = round((occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0, 1)
+		
+		# Calculate average occupancy for last 30 days
+		occupancy_history = []
+		for i in range(30):
+			date = today - timedelta(days=i)
+			occupied = Booking.objects.filter(
+				status_pesanan='CHECKED_IN',
+				tanggal_check_in__lte=date,
+				tanggal_check_out__gt=date
+			).count()
+			rate = (occupied / total_rooms * 100) if total_rooms > 0 else 0
+			occupancy_history.append({'date': date, 'rate': round(rate, 1), 'occupied': occupied})
+		
+		avg_occupancy_30_days = round(sum(d['rate'] for d in occupancy_history) / len(occupancy_history), 1)
+		
 		context.update({
 			'total_rooms': total_rooms,
 			'occupied_rooms': occupied_rooms,
-			'occupancy_rate': round((occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0, 1),
+			'occupancy_rate': occupancy_rate,
+			'avg_occupancy_30_days': avg_occupancy_30_days,
+			'occupancy_history': list(reversed(occupancy_history)),
 		})
+		
+		# ===== ROOM TYPE PERFORMANCE =====
+		room_type_performance = RoomType.objects.annotate(
+			booking_count=Count('rooms__bookings', filter=Q(rooms__bookings__created_at__gte=thirty_days_ago)),
+			total_revenue=Sum(
+				'rooms__bookings__total_biaya_akhir',
+				filter=Q(
+					rooms__bookings__created_at__gte=thirty_days_ago,
+					rooms__bookings__payment__status_pembayaran='VERIFIED'
+				)
+			),
+			total_rooms=Count('rooms', filter=Q(rooms__is_active=True))
+		).order_by('-booking_count')
+		context['room_type_performance'] = room_type_performance
+		
+		# ===== GUEST STATISTICS =====
+		from django.contrib.auth import get_user_model
+		User = get_user_model()
+		
+		total_guests = User.objects.filter(is_staff=False).count()
+		new_guests_30_days = User.objects.filter(
+			is_staff=False,
+			date_joined__gte=thirty_days_ago
+		).count()
+		repeat_guests = User.objects.filter(
+			is_staff=False
+		).annotate(
+			booking_count=Count('bookings')
+		).filter(booking_count__gt=1).count()
+		
+		context.update({
+			'total_guests': total_guests,
+			'new_guests_30_days': new_guests_30_days,
+			'repeat_guests': repeat_guests,
+			'repeat_rate': round((repeat_guests / total_guests * 100) if total_guests > 0 else 0, 1),
+		})
+		
+		# ===== VOUCHER USAGE =====
+		vouchers_used = Booking.objects.filter(
+			voucher__isnull=False,
+			created_at__gte=thirty_days_ago
+		).count()
+		total_discount = Booking.objects.filter(
+			voucher__isnull=False,
+			created_at__gte=thirty_days_ago
+		).aggregate(total=Sum('diskon_voucher'))['total'] or Decimal('0.00')
+		
+		context.update({
+			'vouchers_used_30_days': vouchers_used,
+			'total_discount_30_days': total_discount,
+		})
+		
+		# ===== ROOM SERVICE STATISTICS =====
+		total_orders = ServiceOrder.objects.count()
+		orders_30_days = ServiceOrder.objects.filter(created_at__gte=thirty_days_ago).count()
+		
+		# Calculate service order revenue manually (no total_amount field, need to sum items)
+		completed_orders = ServiceOrder.objects.filter(
+			created_at__gte=thirty_days_ago,
+			status__in=['DELIVERED', 'READY']
+		).prefetch_related('items')
+		
+		orders_revenue_30_days = Decimal('0.00')
+		for order in completed_orders:
+			orders_revenue_30_days += order.total
+		
+		context.update({
+			'total_service_orders': total_orders,
+			'service_orders_30_days': orders_30_days,
+			'service_revenue_30_days': orders_revenue_30_days,
+		})
+		
+		# ===== CONVERSION METRICS =====
+		# Booking completion rate (confirmed/total)
+		total_created = Booking.objects.filter(created_at__gte=thirty_days_ago).count()
+		total_confirmed = Booking.objects.filter(
+			created_at__gte=thirty_days_ago,
+			status_pesanan__in=['CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT']
+		).count()
+		conversion_rate = round((total_confirmed / total_created * 100) if total_created > 0 else 0, 1)
+		
+		# Cancellation rate
+		total_cancelled = Booking.objects.filter(
+			created_at__gte=thirty_days_ago,
+			status_pesanan='CANCELLED'
+		).count()
+		cancellation_rate = round((total_cancelled / total_created * 100) if total_created > 0 else 0, 1)
+		
+		context.update({
+			'conversion_rate': conversion_rate,
+			'cancellation_rate': cancellation_rate,
+		})
+		
+		# ===== AVERAGE STAY DURATION =====
+		completed_bookings = Booking.objects.filter(
+			status_pesanan='CHECKED_OUT',
+			created_at__gte=thirty_days_ago
+		)
+		total_nights = 0
+		count = 0
+		for booking in completed_bookings:
+			nights = (booking.tanggal_check_out - booking.tanggal_check_in).days
+			total_nights += nights
+			count += 1
+		
+		avg_stay_duration = round(total_nights / count, 1) if count > 0 else 0
+		context['avg_stay_duration'] = avg_stay_duration
 		
 		return context
 
